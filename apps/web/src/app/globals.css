@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 28, 68; /* #001C44 */
+  --background-rgb: 247, 251, 253;
+  --color-navy: #001c44;
+  --color-deep-teal: #0c5776;
+  --color-teal: #2d99ae;
+  --color-ice-cyan: #bcfefe;
+  --color-peach: #f8dad0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+::selection {
+  background-color: #2d99ae;
+  color: #ffffff;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f8f8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2d99ae;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0c5776;
+}
+
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Tối ưu hóa in ấn bảng tính Excel / Đơn hàng */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-excel-area,
+  #printable-excel-area * {
+    visibility: visible;
+  }
+  #printable-excel-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 12px;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
+

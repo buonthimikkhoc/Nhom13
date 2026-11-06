@@ -1,0 +1,241 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String      @id @default(uuid())
+  email            String      @unique
+  phone            String?     @unique
+  password         String
+  fullName         String
+  avatar           String?
+  birthday         String?
+  status           String      @default("active") // active, locked
+  role             String      @default("customer") // customer, admin, warehouse, support
+  addresses        Address[]
+  orders           Order[]
+  reviews          Review[]
+  carts            Cart[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  receiverName String
+  phone        String
+  province     String
+  district     String
+  ward         String
+  street       String
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  name        String
+  slug        String     @unique
+  image       String?
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Brand {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  slug      String    @unique
+  logo      String?
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id             String           @id @default(uuid())
+  categoryId     String
+  category       Category         @relation(fields: [categoryId], references: [id])
+  brandId        String
+  brand          Brand            @relation(fields: [brandId], references: [id])
+  name           String
+  slug           String           @unique
+  shortDesc      String?
+  description    String?
+  status         String           @default("active") // active, draft, hidden
+  isFeatured     Boolean          @default(false)
+  warrantyMonths Int              @default(12)
+  specs          String?          // Lưu trữ JSON: { "cpu": "Core i7", "ram": "16GB", "vga": "RTX 4060", ... }
+  avgRating      Float            @default(5.0)
+  reviewCount    Int              @default(0)
+  variants       ProductVariant[]
+  images         ProductImage[]
+  reviews        Review[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model ProductImage {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url         String
+  isThumbnail Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model ProductVariant {
+  id             String         @id @default(uuid())
+  productId      String
+  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku            String         @unique
+  name           String         // vd: "Xám không gian - 512GB - 16GB RAM"
+  color          String?
+  storage        String?
+  ram            String?
+  price          Int            // Giá bán thực tế (VND)
+  compareAtPrice Int?           // Giá niêm yết cũ (nếu có giảm giá)
+  costPrice      Int?           // Giá vốn
+  stock          Int            @default(0)
+  reservedStock  Int            @default(0)
+  isActive       Boolean        @default(true)
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  serialNumbers  SerialNumber[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model SerialNumber {
+  id           String          @id @default(uuid())
+  variantId    String
+  variant      ProductVariant  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  serialNumber String          @unique
+  status       String          @default("in_stock") // in_stock, sold, returned
+  orderId      String?
+  warrantyStart DateTime?
+  warrantyEnd   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String?
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String?
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String         @id @default(uuid())
+  cartId    String
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity  Int            @default(1)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model Order {
+  id              String               @id @default(uuid())
+  code            String               @unique // VD: TECH-20261030-001
+  userId          String?
+  user            User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestEmail      String?
+  guestPhone      String?
+  receiverName    String
+  phone           String
+  province        String
+  district        String
+  ward            String
+  street          String
+  status          String               @default("pending") // pending -> packing -> shipping -> completed / cancelled / returned
+  paymentStatus   String               @default("unpaid")  // unpaid, paid, refunded
+  paymentMethod   String               @default("cod")     // cod, vnpay, momo, bank_transfer
+  shippingMethod  String               @default("standard")
+  shippingFee     Int                  @default(0)
+  subtotal        Int                  @default(0)
+  discountTotal   Int                  @default(0)
+  grandTotal      Int                  @default(0)
+  voucherCode     String?
+  note            String?
+  cancelReason    String?
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+}
+
+model OrderItem {
+  id          String         @id @default(uuid())
+  orderId     String
+  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
+  productName String
+  sku         String
+  price       Int
+  quantity    Int
+  lineTotal   Int
+  serialNumber String?
+  createdAt   DateTime       @default(now())
+}
+
+model OrderStatusHistory {
+  id         String   @id @default(uuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  note       String?
+  changedBy  String?
+  createdAt  DateTime @default(now())
+}
+
+model Voucher {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  type        String    @default("fixed") // fixed (VND) hoặc percent (%)
+  value       Int       // Giá trị giảm (VND hoặc %)
+  maxDiscount Int?      // Mức giảm tối đa nếu là percent
+  minOrder    Int       @default(0)
+  usageLimit  Int       @default(100)
+  usedCount   Int       @default(0)
+  startsAt    DateTime  @default(now())
+  endsAt      DateTime
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating      Int      @default(5)
+  comment     String
+  isPurchased Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

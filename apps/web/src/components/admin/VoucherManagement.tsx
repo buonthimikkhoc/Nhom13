@@ -30,7 +30,9 @@ import {
   Zap,
   RotateCcw,
   SlidersHorizontal,
+  Trash2,
 } from "lucide-react";
+import { api, AdminVoucher } from "../../lib/api";
 
 export function VoucherManagement() {
   const formatVND = (price: number) => {
@@ -72,141 +74,70 @@ export function VoucherManagement() {
   const [simOrderValue, setSimOrderValue] = useState(250000000);
   const [simResult, setSimResult] = useState<any | null>(null);
 
-  // Mock dữ liệu danh sách Voucher Doanh Nghiệp & VIP
-  const [voucherList, setVoucherList] = useState([
-    {
-      id: "vouch-01",
-      code: "B2B-AI-RIG-10M",
-      name: "Tài Trợ Hợp Đồng Máy Trạm Workstation AI B2B",
-      type: "fixed", // fixed (tiền mặt) | percent (phần trăm) | points (hoàn điểm)
-      discountValue: 10000000,
-      discountText: "Giảm 10.000.000 ₫",
-      minOrderValue: 150000000,
-      targetAudience: "Doanh nghiệp B2B & Khách VIP",
-      category: "b2b",
-      usedCount: 28,
-      totalLimit: 50,
-      totalBudget: 500000000,
-      usedBudget: 280000000,
-      startDate: "01/02/2026",
-      endDate: "31/03/2026",
-      status: "active", // active | scheduled | exhausted | paused
-      statusText: "Đang kích hoạt",
-      sponsor: "TechCore Enterprise & ASUS ROG Alliance",
-      description: "Áp dụng cho hợp đồng mua máy trạm AI NeuralForge, cụm 4x GPU RTX 4090 hoặc Threadripper 7995WX.",
-      recentOrders: ["#TECH-2026-8891 (DeepAI)", "#TECH-2026-8880 (FPT AI)"],
-    },
-    {
-      id: "vouch-02",
-      code: "VIP-TITANIUM-8M",
-      name: "Đặc Quyền Hội Viên Doanh Nghiệp Hạng Titanium",
-      type: "fixed",
-      discountValue: 8000000,
-      discountText: "Giảm 8.000.000 ₫",
-      minOrderValue: 80000000,
-      targetAudience: "Hội viên VIP Titanium",
-      category: "vip",
-      usedCount: 15,
-      totalLimit: 30,
-      totalBudget: 240000000,
-      usedBudget: 120000000,
-      startDate: "15/01/2026",
-      endDate: "30/06/2026",
-      status: "active",
-      statusText: "Đang kích hoạt",
-      sponsor: "TechCore VIP Concierge Fund",
-      description: "Dành riêng cho doanh nghiệp chi tiêu tích lũy trên 500 triệu đồng tại hệ sinh thái TechCore.",
-      recentOrders: ["#TECH-2026-8889 (Trần Minh Quân)"],
-    },
-    {
-      id: "vouch-03",
-      code: "ASUS-ROG-ASTRAL-5M",
-      name: "Trợ Giá GPU Flagship ASUS ROG Astral RTX 4090",
-      type: "fixed",
-      discountValue: 5000000,
-      discountText: "Giảm 5.000.000 ₫",
-      minOrderValue: 50000000,
-      targetAudience: "Mọi khách hàng mua GPU Flagship",
-      category: "partner",
-      usedCount: 42,
-      totalLimit: 60,
-      totalBudget: 300000000,
-      usedBudget: 210000000,
-      startDate: "10/02/2026",
-      endDate: "28/02/2026",
-      status: "active",
-      statusText: "Đang kích hoạt",
-      sponsor: "ASUS Global Distribution VN",
-      description: "Chương trình đồng tài trợ độc quyền giữa TechCore và ASUS ROG nhân dịp mở rộng kho Hub Landmark 81.",
-      recentOrders: ["#TECH-2026-8888 (Nguyễn Văn An)"],
-    },
-    {
-      id: "vouch-04",
-      code: "TECHPOINTS-CASHBACK-10P",
-      name: "Hoàn 10% TechPoints Cho Đơn Hàng Linh Kiện AI",
-      type: "points",
-      discountValue: 10,
-      discountText: "Hoàn 10% TechPoints (Tối đa 15M)",
-      minOrderValue: 30000000,
-      targetAudience: "Hội viên VIP Gold, Platinum, Titanium",
-      category: "vip",
-      usedCount: 88,
-      totalLimit: 150,
-      totalBudget: 200000000,
-      usedBudget: 88200000,
-      startDate: "01/01/2026",
-      endDate: "31/12/2026",
-      status: "active",
-      statusText: "Đang kích hoạt",
-      sponsor: "TechCore Treasury & TechPay Ecosystem",
-      description: "Tích điểm vào ví TechPoints điện tử để trừ tiền mặt cho các lần mua linh kiện hoặc nâng cấp sau này.",
-      recentOrders: ["#TECH-2026-8892 (Phạm Quỳnh Nga)"],
-    },
-    {
-      id: "vouch-05",
-      code: "COOLVAN-VIP-EXPRESS",
-      name: "Miễn Phí Giao Hỏa Tốc Xe Lạnh CoolVan 2 Giờ",
-      type: "fixed",
-      discountValue: 500000,
-      discountText: "Miễn phí 100% Phí Vận Chuyển",
-      minOrderValue: 20000000,
-      targetAudience: "Tất cả đơn hàng Workstation & GPU",
-      category: "coolvan",
-      usedCount: 239,
-      totalLimit: 500,
-      totalBudget: 250000000,
-      usedBudget: 119500000,
-      startDate: "01/01/2026",
-      endDate: "31/12/2026",
-      status: "active",
-      statusText: "Đang kích hoạt",
-      sponsor: "CoolVan Logistics Fleet",
-      description: "Bảo đảm nhiệt độ 18.5°C, cảm biến chống sốc g-Sensor và có KTV bảo an đi kèm bàn giao tận nơi.",
-      recentOrders: ["Toàn bộ đơn hàng nội thành TP.HCM & Hà Nội"],
-    },
-    {
-      id: "vouch-06",
-      code: "STARTUP-AI-GRANT-50M",
-      name: "Gói Tài Trợ Hạ Tầng AI Cho Startup Công Nghệ",
-      type: "percent",
-      discountValue: 8,
-      discountText: "Giảm 8% (Tối đa 50.000.000 ₫)",
-      minOrderValue: 300000000,
-      targetAudience: "Doanh nghiệp AI Startup có MST",
-      category: "b2b",
-      usedCount: 5,
-      totalLimit: 10,
-      totalBudget: 250000000,
-      usedBudget: 215000000,
-      startDate: "01/02/2026",
-      endDate: "30/04/2026",
-      status: "active",
-      statusText: "Đang kích hoạt",
-      sponsor: "TechCore Innovation Grant & NVIDIA Inception",
-      description: "Thúc đẩy các dự án GenAI, y tế thông minh và thị giác máy tính tại Việt Nam ứng dụng hạ tầng TechCore.",
-      recentOrders: ["#TECH-2026-8800 (FPT AI Lab)", "#TECH-2026-8891 (DeepAI)"],
-    },
-  ]);
+  // Danh sách Voucher Doanh Nghiệp & VIP đồng bộ Real-time với Hệ thống
+  const [voucherList, setVoucherList] = useState<any[]>([]);
+
+  const loadVouchers = async () => {
+    try {
+      const res = await api.getAdminVouchers();
+      if (res.success && Array.isArray(res.data)) {
+        const mapped = res.data.map((v: any) => ({
+          id: v.id,
+          code: v.code,
+          name: v.name,
+          type: v.type,
+          discountValue: v.value,
+          discountText:
+            v.type === "fixed"
+              ? `Giảm ${formatVND(v.value)}`
+              : v.type === "percent"
+              ? `Giảm ${v.value}%${v.maxDiscount ? ` (Tối đa ${formatVND(v.maxDiscount)})` : ""}`
+              : `Miễn phí CoolVan`,
+          minOrderValue: v.minOrder,
+          targetAudience: v.targetAudience || "Mọi khách hàng",
+          category: v.category || "vip",
+          usedCount: v.usedCount || 0,
+          totalLimit: v.usageLimit || 100,
+          totalBudget: (v.value || 0) * (v.usageLimit || 100),
+          usedBudget: (v.value || 0) * (v.usedCount || 0),
+          startDate: v.startsAt || "01/01/2026",
+          endDate: v.endsAt || "31/12/2026",
+          status: !v.isActive ? "paused" : (v.usageLimit && v.usedCount >= v.usageLimit) ? "exhausted" : "active",
+          statusText: !v.isActive ? "Tạm ngưng" : (v.usageLimit && v.usedCount >= v.usageLimit) ? "Hết lượt dùng" : "Đang kích hoạt",
+          sponsor: v.sponsor || "TechCore Official",
+          description: v.description || "",
+          recentOrders: v.recentOrders || [],
+        }));
+        setVoucherList(mapped);
+      }
+    } catch (e) {
+      console.error("Lỗi nạp vouchers:", e);
+    }
+  };
+
+  useEffect(() => {
+    loadVouchers();
+    const handleSync = () => loadVouchers();
+    window.addEventListener("techcore:vouchers-changed", handleSync);
+    window.addEventListener("techcore:orders-changed", handleSync);
+    return () => {
+      window.removeEventListener("techcore:vouchers-changed", handleSync);
+      window.removeEventListener("techcore:orders-changed", handleSync);
+    };
+  }, []);
+
+  const handleDeleteVoucher = async (id: string, code: string) => {
+    if (confirm(`Bạn có chắc chắn muốn xóa mã voucher "${code}" không?`)) {
+      await api.deleteAdminVoucher(id);
+      loadVouchers();
+    }
+  };
+
+  const handleToggleStatus = async (item: any) => {
+    const newIsActive = item.status === "paused";
+    await api.updateAdminVoucher(item.id, { isActive: newIsActive });
+    loadVouchers();
+  };
 
   // Sao chép mã voucher
   const handleCopyCode = (code: string) => {
@@ -915,14 +846,24 @@ export function VoucherManagement() {
 
                     {/* Actions */}
                     <td className="p-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedVoucherDetail(item)}
-                        className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-700 text-xs font-bold transition inline-flex items-center gap-1"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Chi tiết</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedVoucherDetail(item)}
+                          className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-700 text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Chi tiết</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteVoucher(item.id, item.code)}
+                          title="Xóa voucher"
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -1031,49 +972,36 @@ export function VoucherManagement() {
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
-                const code = (fd.get("code") as string).toUpperCase() || `PROMO-${Date.now().toString().slice(-4)}`;
+                const code = ((fd.get("code") as string) || `PROMO-${Date.now().toString().slice(-4)}`).trim().toUpperCase();
                 const name = (fd.get("name") as string) || "Chương trình ưu đãi TechCore";
                 const type = (fd.get("type") as "fixed" | "percent" | "points") || "fixed";
-                const discountValue = Number(fd.get("discountValue")) || 5000000;
-                const minOrder = Number(fd.get("minOrder")) || 50000000;
-                const limit = Number(fd.get("limit")) || 50;
-                const category = (fd.get("category") as string) || "b2b";
-                const audience = (fd.get("audience") as string) || "Doanh nghiệp B2B & Khách VIP";
+                const discountValue = Number(fd.get("discountValue")) || 50000;
+                const minOrder = Number(fd.get("minOrder")) || 0;
+                const limit = Number(fd.get("limit")) || 100;
+                const category = (fd.get("category") as string) || "vip";
+                const audience = (fd.get("audience") as string) || "Toàn bộ khách hàng TechCore";
 
-                const newVoucher = {
-                  id: `vouch-${Date.now()}`,
+                const res = await api.createAdminVoucher({
                   code,
                   name,
-                  type,
-                  discountValue,
-                  discountText:
-                    type === "fixed"
-                      ? `Giảm ${formatVND(discountValue)}`
-                      : type === "percent"
-                      ? `Giảm ${discountValue}% (Tối đa 50M)`
-                      : `Hoàn ${discountValue}% TechPoints`,
-                  minOrderValue: minOrder,
+                  type: (type === "points" ? "fixed" : type) as any,
+                  value: discountValue,
+                  minOrder,
+                  usageLimit: limit,
                   targetAudience: audience,
                   category,
-                  usedCount: 0,
-                  totalLimit: limit,
-                  totalBudget: discountValue * limit,
-                  usedBudget: 0,
-                  startDate: new Date().toLocaleDateString("vi-VN"),
-                  endDate: "31/12/2026",
-                  status: "active",
-                  statusText: "Đang kích hoạt",
                   sponsor: "TechCore Treasury Promotion Pool",
                   description: "Chương trình ưu đãi vừa được tạo mới trên hệ thống TechCore.",
-                  recentOrders: [],
-                };
+                });
 
-                setVoucherList((prev) => [newVoucher, ...prev]);
-                setShowCreateModal(false);
-                alert(`✓ Đã tạo thành công mã Voucher ${code} và kích hoạt trên toàn hệ sinh thái!`);
+                if (res.success) {
+                  await loadVouchers();
+                  setShowCreateModal(false);
+                  alert(`✓ Đã tạo thành công mã Voucher "${code}" và kích hoạt trên toàn hệ sinh thái TechCore!`);
+                }
               }}
               className="space-y-3.5 text-xs"
             >

@@ -1138,6 +1138,199 @@ export const DEFAULT_SEED_RMA = [
   },
 ];
 
+// =========================================================================
+// HỆ THỐNG MÃ GIẢM GIÁ & VOUCHER KHUYẾN MÃI TOÀN DIỆN (ENTERPRISE VOUCHERS)
+// =========================================================================
+export interface AdminVoucher {
+  id: string;
+  code: string;
+  name: string;
+  type: "fixed" | "percent" | "freeship";
+  value: number; // Tiền mặt (VNĐ) hoặc phần trăm (%)
+  maxDiscount?: number;
+  minOrder: number;
+  usageLimit: number;
+  usedCount: number;
+  startsAt: string;
+  endsAt: string;
+  isActive: boolean;
+  targetAudience?: string;
+  category?: string;
+  sponsor?: string;
+  description?: string;
+  recentOrders?: string[];
+}
+
+export const DEFAULT_SEED_VOUCHERS: AdminVoucher[] = [
+  {
+    id: "vouch-01",
+    code: "B2B-AI-RIG-10M",
+    name: "Tài Trợ Hợp Đồng Máy Trạm Workstation AI B2B",
+    type: "fixed",
+    value: 10000000,
+    minOrder: 150000000,
+    usageLimit: 50,
+    usedCount: 28,
+    startsAt: "2026-01-01",
+    endsAt: "2026-12-31",
+    isActive: true,
+    targetAudience: "Doanh nghiệp B2B & Khách VIP",
+    category: "b2b",
+    sponsor: "TechCore Enterprise & ASUS ROG Alliance",
+    description: "Áp dụng cho hợp đồng mua máy trạm AI NeuralForge, cụm GPU RTX 4090 hoặc Threadripper.",
+    recentOrders: ["#TECH-2026-8891 (DeepAI)", "#TECH-2026-8880 (FPT AI)"],
+  },
+  {
+    id: "vouch-02",
+    code: "TECHNEW100K",
+    name: "Ưu Đãi Tân Thủ Chào Mừng Khách Hàng Mới",
+    type: "fixed",
+    value: 100000,
+    minOrder: 1000000,
+    usageLimit: 500,
+    usedCount: 142,
+    startsAt: "2026-01-01",
+    endsAt: "2026-12-31",
+    isActive: true,
+    targetAudience: "Khách hàng mới đăng ký tài khoản",
+    category: "vip",
+    sponsor: "TechCore Quỹ Chào Mừng",
+    description: "Giảm ngay 100.000 ₫ cho đơn hàng công nghệ đầu tiên từ 1.000.000 ₫.",
+    recentOrders: ["#TECH-2026-7712", "#TECH-2026-7650"],
+  },
+  {
+    id: "vouch-03",
+    code: "GAMING2026",
+    name: "Lễ Hội Gaming Gear & Siêu Card Đồ Họa 2026",
+    type: "percent",
+    value: 5,
+    maxDiscount: 1500000,
+    minOrder: 15000000,
+    usageLimit: 200,
+    usedCount: 88,
+    startsAt: "2026-01-01",
+    endsAt: "2026-12-31",
+    isActive: true,
+    targetAudience: "Gamer, Streamer & Khách hàng cá nhân",
+    category: "partner",
+    sponsor: "NVIDIA GeForce & Corsair VN",
+    description: "Giảm 5% tối đa 1.500.000 ₫ cho đơn hàng máy tính chơi game và linh kiện từ 15 triệu.",
+    recentOrders: ["#TECH-2026-6540", "#TECH-2026-6410"],
+  },
+  {
+    id: "vouch-04",
+    code: "FREESHIP",
+    name: "Miễn Phí Vận Chuyển Chuyên Dụng Xe Lạnh CoolVan",
+    type: "freeship",
+    value: 30000,
+    minOrder: 500000,
+    usageLimit: 1000,
+    usedCount: 412,
+    startsAt: "2026-01-01",
+    endsAt: "2026-12-31",
+    isActive: true,
+    targetAudience: "Toàn bộ khách hàng TechCore",
+    category: "coolvan",
+    sponsor: "CoolVan Logistics Dispatch",
+    description: "Miễn phí vận chuyển bảo ôn 21°C cho đơn hàng linh kiện từ 500.000 ₫.",
+    recentOrders: ["#TECH-2026-5520", "#TECH-2026-5412"],
+  },
+  {
+    id: "vouch-05",
+    code: "TECHVIP500",
+    name: "Đặc Quyền Tri Ân Hội Viên Platinum & Diamond",
+    type: "fixed",
+    value: 500000,
+    minOrder: 10000000,
+    usageLimit: 100,
+    usedCount: 45,
+    startsAt: "2026-01-01",
+    endsAt: "2026-12-31",
+    isActive: true,
+    targetAudience: "Hội viên TechCore VIP Platinum+",
+    category: "vip",
+    sponsor: "TechCore VIP Concierge Club",
+    description: "Giảm ngay 500.000 ₫ trực tiếp cho đơn hàng giá trị từ 10.000.000 ₫.",
+    recentOrders: ["#TECH-2026-9901 (FPT Tech)"],
+  },
+  {
+    id: "vouch-06",
+    code: "AIWORKSTATION5M",
+    name: "Trợ Giá Khởi Nghiệp AI & Deep Learning Lab",
+    type: "fixed",
+    value: 5000000,
+    minOrder: 80000000,
+    usageLimit: 30,
+    usedCount: 19,
+    startsAt: "2026-01-01",
+    endsAt: "2026-12-31",
+    isActive: true,
+    targetAudience: "Startup AI, Phòng Lab & Viện nghiên cứu",
+    category: "b2b",
+    sponsor: "Quỹ Phát Triển Công Nghệ Trí Tuệ Nhân Tạo",
+    description: "Hỗ trợ 5.000.000 ₫ khi build dàn máy trạm đồ họa 3D hoặc huấn luyện mô hình LLM.",
+    recentOrders: ["#TECH-2026-8711"],
+  },
+  {
+    id: "vouch-07",
+    code: "APPLECARE10",
+    name: "Ưu Đãi Hệ Sinh Thái Apple & MacBook M3/M4 Max",
+    type: "percent",
+    value: 10,
+    maxDiscount: 2000000,
+    minOrder: 20000000,
+    usageLimit: 80,
+    usedCount: 37,
+    startsAt: "2026-01-01",
+    endsAt: "2026-12-31",
+    isActive: true,
+    targetAudience: "Người dùng Apple Authorised",
+    category: "partner",
+    sponsor: "Apple Authorized Reseller Partnership",
+    description: "Giảm 10% (tối đa 2 triệu) khi mua MacBook Pro, Mac Studio hoặc màn hình Apple Studio Display.",
+    recentOrders: ["#TECH-2026-8120"],
+  },
+  {
+    id: "vouch-08",
+    code: "TECHCORE20K",
+    name: "Voucher Quà Tặng Mọi Đơn Hàng Phụ Kiện",
+    type: "fixed",
+    value: 20000,
+    minOrder: 0,
+    usageLimit: 2000,
+    usedCount: 890,
+    startsAt: "2026-01-01",
+    endsAt: "2026-12-31",
+    isActive: true,
+    targetAudience: "Mọi đơn hàng phụ kiện cáp sạc, chuột phím",
+    category: "partner",
+    sponsor: "TechCore Quick Deal",
+    description: "Giảm 20.000 ₫ cho tất cả đơn hàng không phân biệt giá trị tối thiểu.",
+    recentOrders: ["#TECH-2026-9011"],
+  },
+];
+
+export function getLocalVouchers(): AdminVoucher[] {
+  if (typeof window === "undefined") return DEFAULT_SEED_VOUCHERS;
+  try {
+    const raw = localStorage.getItem("tech_vouchers");
+    if (!raw) {
+      localStorage.setItem("tech_vouchers", JSON.stringify(DEFAULT_SEED_VOUCHERS));
+      return DEFAULT_SEED_VOUCHERS;
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  } catch (e) {}
+  return DEFAULT_SEED_VOUCHERS;
+}
+
+export function saveLocalVouchers(vouchers: AdminVoucher[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("tech_vouchers", JSON.stringify(vouchers));
+  } catch (e) {}
+}
+
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const sessionId =
@@ -1693,6 +1886,9 @@ export const api = {
     );
 
     const calculatedTotal = orderItems.reduce((sum: number, it: any) => sum + it.lineTotal, 0);
+    const voucherDiscount = Number(orderData.discountTotal || orderData.discount || 0);
+    const shippingFee = (calculatedTotal > 2000000 || orderData.voucherCode === "FREESHIP") ? 0 : 30000;
+    const finalGrandTotal = Math.max(0, calculatedTotal - voucherDiscount + shippingFee);
 
     const newOrder = {
       id: "ord-" + Date.now(),
@@ -1708,7 +1904,11 @@ export const api = {
       paymentMethod: orderData.paymentMethod || "cod",
       paymentStatus: orderData.paymentMethod === "cod" ? "pending" : "paid",
       status: "pending",
-      grandTotal: calculatedTotal,
+      subtotal: calculatedTotal,
+      voucherCode: orderData.voucherCode || null,
+      discountTotal: voucherDiscount,
+      shippingFee,
+      grandTotal: finalGrandTotal,
       createdAt: new Date().toISOString(),
       items: orderItems,
     };
@@ -1717,8 +1917,30 @@ export const api = {
     localOrders.unshift(newOrder);
     saveLocalOrders(localOrders);
 
+    // Cập nhật số lượt dùng của Voucher nếu có
+    if (orderData.voucherCode) {
+      try {
+        const cleanVCode = String(orderData.voucherCode).trim().toUpperCase();
+        const vList = getLocalVouchers();
+        const vIdx = vList.findIndex((v) => v.code.toUpperCase() === cleanVCode);
+        if (vIdx !== -1) {
+          vList[vIdx].usedCount = (vList[vIdx].usedCount || 0) + 1;
+          if (!vList[vIdx].recentOrders) vList[vIdx].recentOrders = [];
+          vList[vIdx].recentOrders.unshift(orderCode);
+          saveLocalVouchers(vList);
+        }
+      } catch (e) {}
+    }
+
     // Làm trống giỏ hàng sau khi đặt thành công
     saveLocalCart({ id: "cart-local", items: [], total: 0 });
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("techcore:orders-changed", { detail: { newOrder } }));
+        window.dispatchEvent(new CustomEvent("techcore:vouchers-changed", { detail: { voucherCode: orderData.voucherCode } }));
+      } catch (e) {}
+    }
 
     return {
       success: true,
@@ -2643,6 +2865,159 @@ export const api = {
         totalCustomers: 2,
         recentOrders: allOrders.slice(0, 5),
       },
+    };
+  },
+
+  // =========================================================================
+  // VOUCHER & KHUYẾN MÃI (DISCOUNTS & PROMOTIONS)
+  // =========================================================================
+  getAdminVouchers: async () => {
+    const list = getLocalVouchers();
+    return { success: true, data: list };
+  },
+
+  createAdminVoucher: async (voucherData: Partial<AdminVoucher>) => {
+    const list = getLocalVouchers();
+    const cleanCode = (voucherData.code || "TECH" + Math.floor(1000 + Math.random() * 9000)).toUpperCase().trim();
+    const newVoucher: AdminVoucher = {
+      id: "vouch-" + Date.now(),
+      code: cleanCode,
+      name: voucherData.name || "Voucher Khuyến Mãi TechCore",
+      type: voucherData.type || "fixed",
+      value: Number(voucherData.value) || 50000,
+      maxDiscount: voucherData.maxDiscount ? Number(voucherData.maxDiscount) : undefined,
+      minOrder: Number(voucherData.minOrder) || 0,
+      usageLimit: Number(voucherData.usageLimit) || 100,
+      usedCount: 0,
+      startsAt: voucherData.startsAt || new Date().toISOString().slice(0, 10),
+      endsAt: voucherData.endsAt || new Date(Date.now() + 60 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+      isActive: voucherData.isActive ?? true,
+      targetAudience: voucherData.targetAudience || "Toàn bộ khách hàng",
+      category: voucherData.category || "vip",
+      sponsor: voucherData.sponsor || "TechCore Official",
+      description: voucherData.description || "",
+      recentOrders: [],
+    };
+    list.unshift(newVoucher);
+    saveLocalVouchers(list);
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("techcore:vouchers-changed", { detail: { newVoucher } }));
+      } catch (e) {}
+    }
+
+    return { success: true, data: newVoucher };
+  },
+
+  updateAdminVoucher: async (id: string, patch: Partial<AdminVoucher>) => {
+    const list = getLocalVouchers();
+    const idx = list.findIndex((v) => v.id === id || v.code.toUpperCase() === id.toUpperCase());
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...patch };
+      saveLocalVouchers(list);
+
+      if (typeof window !== "undefined") {
+        try {
+          window.dispatchEvent(new CustomEvent("techcore:vouchers-changed", { detail: { updated: list[idx] } }));
+        } catch (e) {}
+      }
+
+      return { success: true, data: list[idx] };
+    }
+    return { success: false, error: { message: "Không tìm thấy voucher để cập nhật" } };
+  },
+
+  deleteAdminVoucher: async (id: string) => {
+    const list = getLocalVouchers();
+    const updated = list.filter((v) => v.id !== id && v.code.toUpperCase() !== id.toUpperCase());
+    saveLocalVouchers(updated);
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("techcore:vouchers-changed", { detail: { deletedId: id } }));
+      } catch (e) {}
+    }
+
+    return { success: true };
+  },
+
+  // Thẩm định và áp dụng Voucher cho đơn hàng / giỏ hàng
+  validateVoucher: async (voucherCode: string, orderSubtotal: number) => {
+    const fmt = (v: number) => v.toLocaleString("vi-VN") + " ₫";
+
+    if (!voucherCode || !voucherCode.trim()) {
+      return {
+        success: false,
+        message: "Vui lòng nhập mã voucher / giảm giá.",
+      };
+    }
+
+    const cleanCode = voucherCode.trim().toUpperCase();
+    const list = getLocalVouchers();
+    const voucher = list.find((v) => v.code.toUpperCase() === cleanCode);
+
+    if (!voucher) {
+      return {
+        success: false,
+        message: `Mã giảm giá "${cleanCode}" không tồn tại hoặc đã bị hủy bỏ trên hệ thống.`,
+      };
+    }
+
+    if (!voucher.isActive) {
+      return {
+        success: false,
+        message: `Mã "${cleanCode}" (${voucher.name}) hiện đang tạm ngưng kích hoạt.`,
+      };
+    }
+
+    // Kiểm tra thời hạn
+    if (voucher.endsAt) {
+      const endTimestamp = new Date(voucher.endsAt).getTime() + (24 * 3600 * 1000 - 1);
+      if (Date.now() > endTimestamp) {
+        return {
+          success: false,
+          message: `Mã "${cleanCode}" đã hết hạn sử dụng vào ngày ${voucher.endsAt}.`,
+        };
+      }
+    }
+
+    // Kiểm tra giới hạn lượt dùng
+    if (voucher.usageLimit > 0 && voucher.usedCount >= voucher.usageLimit) {
+      return {
+        success: false,
+        message: `Mã "${cleanCode}" đã hết số lượt sử dụng theo ngân sách (${voucher.usedCount}/${voucher.usageLimit} lượt).`,
+      };
+    }
+
+    // Kiểm tra giá trị đơn hàng tối thiểu
+    if (voucher.minOrder > 0 && orderSubtotal < voucher.minOrder) {
+      const diff = voucher.minOrder - orderSubtotal;
+      return {
+        success: false,
+        message: `Đơn hàng tối thiểu phải từ ${fmt(voucher.minOrder)} để áp dụng mã "${cleanCode}". Bạn cần mua thêm ${fmt(diff)}.`,
+      };
+    }
+
+    // Tính toán số tiền được giảm
+    let discount = 0;
+    if (voucher.type === "percent") {
+      const rawDiscount = Math.round((orderSubtotal * voucher.value) / 100);
+      discount = voucher.maxDiscount ? Math.min(rawDiscount, voucher.maxDiscount) : rawDiscount;
+    } else if (voucher.type === "fixed") {
+      discount = Math.min(voucher.value, orderSubtotal);
+    } else if (voucher.type === "freeship") {
+      discount = 30000;
+    }
+
+    const finalAmount = Math.max(0, orderSubtotal - discount);
+
+    return {
+      success: true,
+      voucher,
+      discount,
+      finalAmount,
+      message: `Áp dụng thành công mã ${voucher.code}! Giảm ngay ${fmt(discount)} cho đơn hàng.`,
     };
   },
 

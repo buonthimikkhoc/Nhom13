@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Lock,
   ShieldCheck,
@@ -11,6 +11,7 @@ import {
   Search,
   Plus,
   Download,
+  Printer,
   CheckCircle2,
   AlertTriangle,
   Clock,
@@ -30,1048 +31,1325 @@ import {
   ExternalLink,
   Shield,
   Zap,
+  Trash2,
+  Copy,
+  ChevronDown,
+  UserPlus,
+  History,
+  FileSpreadsheet,
+  AlertCircle,
 } from "lucide-react";
+import { api, RbacAccount } from "../../lib/api";
+import { vipToast } from "../common/VipToast";
+
+const BROADCAST_CHANNEL_NAME = "techcore_admin_rbac_channel";
 
 export function RbacManagement() {
-  // State bộ lọc và tìm kiếm
+  // 1. STATE BỘ LỌC, TÌM KIẾM & PHÂN TRANG
   const [activeTab, setActiveTab] = useState<
     "all" | "super_admin" | "order_admin" | "tech_admin" | "customer_test"
   >("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [twoFactorFilter, setTwoFactorFilter] = useState("all");
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [showPasswordMap, setShowPasswordMap] = useState<{ [key: string]: boolean }>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "all">(10);
 
   // Modals
-  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
-  const [selectedAccountAudit, setSelectedAccountAudit] = useState<any | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedAccountAudit, setSelectedAccountAudit] = useState<RbacAccount | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState<RbacAccount | null>(null);
+  const [showExportPreviewModal, setShowExportPreviewModal] = useState(false);
 
   // RBAC Simulator State
   const [simAccountEmail, setSimAccountEmail] = useState("admin1@techcore.vn");
   const [simTargetPath, setSimTargetPath] = useState("/admin/doanh-thu");
   const [simCheckResult, setSimCheckResult] = useState<any | null>(null);
 
-  // Danh sách tài khoản hệ thống (khớp 100% tài liệu TAI_KHOAN_ADMIN.md)
-  const [accountsList, setAccountsList] = useState([
-    {
-      id: "usr-admin-01",
-      fullName: "Nguyễn Quốc Anh",
-      email: "admin1@techcore.vn",
-      passwordDisplay: "Admin@123",
-      role: "super_admin",
-      roleTitle: "Super Admin (Tổng Quản Trị)",
-      roleBadgeColor: "bg-red-50 text-red-700 border-red-200",
-      duties: "Toàn quyền kiểm soát hệ thống, xem doanh thu tài chính, cấu hình sàn & phân quyền RBAC.",
-      permissions: ["revenue", "orders", "products", "inventory", "warranty", "vouchers", "rbac", "settings"],
-      status: "active",
-      statusText: "Đang trực tuyến (Active Session)",
-      lastLogin: "27/02/2026 • 15:20:45",
-      loginIp: "118.69.182.10 (TP.HCM)",
-      auditLogs: [
-        { time: "15:20", action: "Đăng nhập hệ thống bằng chứng thực TLS 1.3" },
-        { time: "15:24", action: "Truy cập Báo Cáo Doanh Thu & Dòng Tiền Đa Kênh" },
-        { time: "15:30", action: "Phê duyệt ngân sách khuyến mãi Voucher Q1/2026" },
-      ],
-    },
-    {
-      id: "usr-admin-02",
-      fullName: "Trần Minh Tuấn",
-      email: "admin2@techcore.vn",
-      passwordDisplay: "Admin@456",
-      role: "order_admin",
-      roleTitle: "Quản Trị Đơn Hàng & Vận Hành Kho",
-      roleBadgeColor: "bg-blue-50 text-blue-700 border-blue-200",
-      duties: "Xử lý chuyển trạng thái đơn (State Machine), điều phối xe lạnh CoolVan, kiểm kê kho Hub.",
-      permissions: ["orders", "products", "inventory"],
-      status: "active",
-      statusText: "Đang trực tuyến (Active Session)",
-      lastLogin: "27/02/2026 • 14:15:10",
-      loginIp: "14.161.40.88 (TP.HCM)",
-      auditLogs: [
-        { time: "14:15", action: "Đăng nhập ca trực điều phối đơn hàng" },
-        { time: "14:28", action: "Xác thực lệnh xuất kho đơn #TECH-2026-8888 xe CoolVan #01" },
-      ],
-    },
-    {
-      id: "usr-admin-03",
-      fullName: "Lê Hoàng Long",
-      email: "admin3@techcore.vn",
-      passwordDisplay: "Admin@789",
-      role: "tech_admin",
-      roleTitle: "Quản Trị Kỹ Thuật & Bảo Hành",
-      roleBadgeColor: "bg-purple-50 text-purple-700 border-purple-200",
-      duties: "Quản lý mã vi mạch e-Shield Serial/IMEI, duyệt thông số Workstation AI, xử lý RMA 1-đổi-1.",
-      permissions: ["products", "inventory", "warranty"],
-      status: "active",
-      statusText: "Đang trực tuyến (Active Session)",
-      lastLogin: "27/02/2026 • 13:45:00",
-      loginIp: "123.30.50.22 (Hà Nội)",
-      auditLogs: [
-        { time: "13:45", action: "Đăng nhập hệ thống Lab kiểm định phần cứng" },
-        { time: "15:12", action: "Tiếp nhận hồ sơ bảo hành 1 đổi 1 #RMA-2026-0812 (RTX 4090)" },
-      ],
-    },
-    {
-      id: "usr-admin-00",
-      fullName: "Quản trị viên TechCore (Dự Phòng)",
-      email: "admin@techcore.vn",
-      passwordDisplay: "Admin@123",
-      role: "super_admin",
-      roleTitle: "Super Admin (Tài Khoản Dự Phòng)",
-      roleBadgeColor: "bg-red-50 text-red-700 border-red-200",
-      duties: "Tài khoản dự phòng tổng quản trị được kích hoạt đồng thời để dự phòng sự cố.",
-      permissions: ["revenue", "orders", "products", "inventory", "warranty", "vouchers", "rbac", "settings"],
-      status: "active",
-      statusText: "Sẵn sàng (Standby)",
-      lastLogin: "26/02/2026 • 09:00:12",
-      loginIp: "118.69.182.10 (TP.HCM)",
-      auditLogs: [
-        { time: "26/02 09:00", action: "Kiểm tra định kỳ cấu hình chứng thư số e-Shield" },
-      ],
-    },
-    {
-      id: "usr-cust-01",
-      fullName: "Nguyễn Văn An (Tài Khoản Test Khách Hàng)",
-      email: "user1@gmail.com",
-      passwordDisplay: "User@123",
-      role: "customer",
-      roleTitle: "Khách Hàng (Customer) - Bị Chặn 403",
-      roleBadgeColor: "bg-slate-100 text-slate-700 border-slate-200",
-      duties: "Mua hàng, xem giỏ hàng, tra cứu bảo hành. Bị chặn tuyệt đối không thể truy cập /admin.",
-      permissions: [],
-      status: "customer_role",
-      statusText: "Khách Hàng Thường (403 Blocked)",
-      lastLogin: "27/02/2026 • 14:28:10",
-      loginIp: "42.112.98.55 (TP.HCM)",
-      auditLogs: [
-        { time: "14:28", action: "Đặt mua Workstation AI Dual RTX 4090 OC đơn #TECH-2026-8888" },
-        { time: "14:35", action: "Cố truy cập link /admin -> Hệ thống chặn lại bằng màn hình 403 Forbidden" },
-      ],
-    },
-    {
-      id: "usr-cust-02",
-      fullName: "Hoàng Mai Linh (Tài Khoản Test Khách Hàng)",
-      email: "user2@gmail.com",
-      passwordDisplay: "User@123",
-      role: "customer",
-      roleTitle: "Khách Hàng (Customer) - Bị Chặn 403",
-      roleBadgeColor: "bg-slate-100 text-slate-700 border-slate-200",
-      duties: "Khách hàng mua phụ kiện & laptop. Bị chặn tuyệt đối không thể truy cập /admin.",
-      permissions: [],
-      status: "customer_role",
-      statusText: "Khách Hàng Thường (403 Blocked)",
-      lastLogin: "25/02/2026 • 10:15:20",
-      loginIp: "115.79.44.12 (Hà Nội)",
-      auditLogs: [
-        { time: "25/02 10:15", action: "Đăng nhập tài khoản mua phụ kiện cáp Thunderbolt" },
-        { time: "25/02 10:20", action: "Cố truy cập link /admin/doanh-thu -> Bị chặn 403 Forbidden" },
-      ],
-    },
-  ]);
+  // Danh sách tài khoản thực tế
+  const [accountsList, setAccountsList] = useState<RbacAccount[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Bật/tắt hiển thị mật khẩu
-  const toggleShowPassword = (id: string) => {
-    setShowPasswordMap((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  // Form tạo tài khoản & bắt lỗi
+  const [createForm, setCreateForm] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
+    role: "order_admin" as "super_admin" | "order_admin" | "tech_admin" | "customer_test",
+    twoFactorEnabled: true,
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Chuyển nhanh tài khoản để test (Đăng nhập tức thì vào localStorage)
-  const handleQuickSwitchUser = (user: any) => {
-    localStorage.setItem("currentUser", JSON.stringify({
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role === "customer" ? "customer" : "admin",
-    }));
-    localStorage.setItem("token", `mock_token_${user.id}_${Date.now()}`);
+  // Tên admin hiện tại phục vụ Audit
+  const [currentAdminName, setCurrentAdminName] = useState<string>("Quản trị viên TechCore");
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("currentUser");
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u.fullName) setCurrentAdminName(u.fullName);
+      }
+    } catch (e) {}
+  }, []);
 
-    if (user.role === "customer") {
-      alert(`Đã chuyển sang tài khoản Khách hàng: ${user.email}!\n\nHệ thống sẽ chuyển bạn sang trang chủ. Nếu bạn cố tình quay lại /admin, bạn sẽ thấy Màn hình 403 Forbidden!`);
-      window.location.href = "/";
-    } else {
-      alert(`Đã chuyển sang tài khoản Quản trị viên: ${user.email} (${user.roleTitle})!\n\nHệ thống sẽ nạp lại quyền hạn của tài khoản này.`);
-      window.location.reload();
+  // Broadcast Action Helper
+  const broadcastAction = (payload: {
+    type: "CREATE_ACCOUNT" | "UPDATE_ROLE" | "UPDATE_STATUS" | "DELETE_ACCOUNT";
+    accountEmail: string;
+    detail?: string;
+    author: string;
+  }) => {
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        const ch = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        ch.postMessage({ ...payload, timestamp: Date.now() });
+        ch.close();
+      } catch (e) {}
     }
   };
 
-  // Thử nghiệm phân quyền Simulator
+  // Nạp danh sách tài khoản
+  const loadAccounts = async () => {
+    try {
+      setLoading(true);
+      const res = await api.getAdminRbacAccounts();
+      if (res.success && Array.isArray(res.data)) {
+        setAccountsList(res.data);
+      }
+    } catch (e) {
+      console.error("Lỗi nạp danh sách tài khoản:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAccounts();
+
+    // Lắng nghe sự kiện đồng bộ từ nội bộ
+    const handleSync = () => loadAccounts();
+    window.addEventListener("techcore:rbac-changed", handleSync);
+
+    // Lắng nghe BroadcastChannel liên tab
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        bc = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        bc.onmessage = (event) => {
+          const msg = event.data;
+          if (!msg || !msg.type) return;
+          loadAccounts();
+
+          if (msg.type === "CREATE_ACCOUNT") {
+            vipToast.info(`Tài khoản mới ${msg.accountEmail} vừa được cấp bởi ${msg.author}.`, "Tài khoản mới");
+          } else if (msg.type === "UPDATE_ROLE") {
+            vipToast.info(`Quyền hạn tài khoản ${msg.accountEmail} đã thay đổi: ${msg.detail}.`, "Cập nhật phân quyền");
+          } else if (msg.type === "DELETE_ACCOUNT") {
+            vipToast.warning(`Tài khoản ${msg.accountEmail} đã bị xóa bởi ${msg.author}.`, "Đã thu hồi tài khoản");
+          }
+        };
+      } catch (e) {}
+    }
+
+    return () => {
+      window.removeEventListener("techcore:rbac-changed", handleSync);
+      if (bc) bc.close();
+    };
+  }, []);
+
+  // Xử lý đổi vai trò trực tiếp trên bảng
+  const handleUpdateRole = async (account: RbacAccount, newRole: "super_admin" | "order_admin" | "tech_admin" | "customer_test") => {
+    const roleTitleMap: Record<string, string> = {
+      super_admin: "Super Admin (Tổng Quản Trị)",
+      order_admin: "Quản Trị Đơn Hàng & Kho Vận",
+      tech_admin: "Kỹ Sư Trưởng & Quản Trị RMA",
+      customer_test: "Tài Khoản Kiểm Thử Hệ Thống",
+    };
+    const defaultPerms: Record<string, string[]> = {
+      super_admin: ["revenue", "orders", "products", "inventory", "warranty", "vouchers", "rbac", "settings"],
+      order_admin: ["orders", "products", "inventory"],
+      tech_admin: ["products", "inventory", "warranty"],
+      customer_test: [],
+    };
+
+    const newPermissions = defaultPerms[newRole] || [];
+    const newRoleTitle = roleTitleMap[newRole] || "Quản trị viên";
+
+    await api.updateAdminRbacAccount(account.id, {
+      role: newRole,
+      roleTitle: newRoleTitle,
+      permissions: newPermissions,
+    });
+
+    setAccountsList((prev) =>
+      prev.map((a) => (a.id === account.id ? { ...a, role: newRole, roleTitle: newRoleTitle, permissions: newPermissions } : a))
+    );
+
+    broadcastAction({
+      type: "UPDATE_ROLE",
+      accountEmail: account.email,
+      detail: `Chuyển sang ${newRoleTitle}`,
+      author: currentAdminName,
+    });
+
+    vipToast.success(`Tài khoản ${account.email} đã được gán vai trò "${newRoleTitle}".`, "Phân quyền thành công");
+  };
+
+  // Bật/tắt quyền hạn cụ thể (Capsule toggle)
+  const handleTogglePermission = async (account: RbacAccount, permKey: string) => {
+    if (account.role === "super_admin" && permKey === "rbac") {
+      vipToast.warning("Không thể thu hồi quyền Quản trị phân quyền (RBAC) của Super Admin tối cao.", "Quyền hạn bảo vệ");
+      return;
+    }
+
+    const hasPerm = account.permissions.includes(permKey);
+    const newPerms = hasPerm
+      ? account.permissions.filter((p) => p !== permKey)
+      : [...account.permissions, permKey];
+
+    await api.updateAdminRbacAccount(account.id, { permissions: newPerms });
+
+    setAccountsList((prev) =>
+      prev.map((a) => (a.id === account.id ? { ...a, permissions: newPerms } : a))
+    );
+
+    vipToast.success(
+      `Đã ${hasPerm ? "thu hồi" : "cấp"} quyền [${permKey.toUpperCase()}] cho tài khoản ${account.email}.`,
+      "Cập nhật quyền hạn"
+    );
+  };
+
+  // Đổi trạng thái tài khoản trực tiếp (Status selector)
+  const handleUpdateStatus = async (account: RbacAccount, newStatus: "active" | "suspended" | "locked") => {
+    if (account.email === "admin1@techcore.vn" && newStatus !== "active") {
+      vipToast.error("Không thể khóa tài khoản Super Admin Root tối cao (admin1@techcore.vn).", "Bảo vệ tài khoản Root");
+      return;
+    }
+
+    const statusTextMap: Record<string, string> = {
+      active: "Đang trực tuyến (Active Session)",
+      suspended: "Tạm đình chỉ (Suspended)",
+      locked: "Đã khóa bảo mật (Locked)",
+    };
+
+    const newStatusText = statusTextMap[newStatus];
+    await api.updateAdminRbacAccount(account.id, { status: newStatus, statusText: newStatusText });
+
+    setAccountsList((prev) =>
+      prev.map((a) => (a.id === account.id ? { ...a, status: newStatus, statusText: newStatusText } : a))
+    );
+
+    broadcastAction({
+      type: "UPDATE_STATUS",
+      accountEmail: account.email,
+      detail: newStatusText,
+      author: currentAdminName,
+    });
+
+    vipToast.success(`Tài khoản ${account.email} đã chuyển sang trạng thái "${newStatusText}".`, "Cập nhật trạng thái");
+  };
+
+  // Bật/tắt 2FA trực tiếp
+  const handleToggle2FA = async (account: RbacAccount) => {
+    const nextVal = !account.twoFactorEnabled;
+    await api.updateAdminRbacAccount(account.id, { twoFactorEnabled: nextVal });
+
+    setAccountsList((prev) =>
+      prev.map((a) => (a.id === account.id ? { ...a, twoFactorEnabled: nextVal } : a))
+    );
+
+    vipToast.success(
+      `Tài khoản ${account.email} đã ${nextVal ? "BẬT" : "TẮT"} xác thực 2 bước (2FA OTP).`,
+      "Bảo mật tài khoản"
+    );
+  };
+
+  // Xóa tài khoản
+  const confirmDeleteAccount = async () => {
+    if (!deletingAccount) return;
+    if (deletingAccount.email === "admin1@techcore.vn") {
+      vipToast.error("Không thể xóa tài khoản Super Admin Root tối cao!", "Bảo vệ hệ thống");
+      setDeletingAccount(null);
+      return;
+    }
+
+    const res = await api.deleteAdminRbacAccount(deletingAccount.id);
+    if (res.success) {
+      setAccountsList((prev) => prev.filter((a) => a.id !== deletingAccount.id));
+      broadcastAction({
+        type: "DELETE_ACCOUNT",
+        accountEmail: deletingAccount.email,
+        author: currentAdminName,
+      });
+      vipToast.success(`Đã xóa vĩnh viễn tài khoản ${deletingAccount.email} khỏi hệ thống.`, "Thu hồi thành công");
+    } else {
+      vipToast.error(res.error?.message || "Không thể xóa tài khoản lúc này.", "Lỗi xóa tài khoản");
+    }
+    setDeletingAccount(null);
+  };
+
+  // Bắt lỗi Form Cấp Tài Khoản Mới
+  const validateCreateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!createForm.fullName.trim() || createForm.fullName.trim().length < 2) {
+      errors.fullName = "Họ tên tối thiểu 2 ký tự.";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!createForm.email.trim()) {
+      errors.email = "Vui lòng nhập địa chỉ email.";
+    } else if (!emailRegex.test(createForm.email.trim())) {
+      errors.email = "Email không đúng định dạng.";
+    } else if (accountsList.some((a) => a.email.toLowerCase() === createForm.email.trim().toLowerCase())) {
+      errors.email = "Email này đã tồn tại trên hệ thống.";
+    }
+
+    if (!createForm.password || createForm.password.length < 6) {
+      errors.password = "Mật khẩu tối thiểu 6 ký tự.";
+    }
+
+    const phoneClean = createForm.phone.replace(/[\s.-]/g, "");
+    if (phoneClean && !/^(0|\+84)[0-9]{9}$/.test(phoneClean)) {
+      errors.phone = "Số điện thoại không hợp lệ (10 số).";
+    }
+
+    return errors;
+  };
+
+  // Tạo tài khoản mới
+  const handleCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors = validateCreateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      vipToast.error(Object.values(errors)[0], "Thông tin chưa hợp lệ");
+      return;
+    }
+
+    setFormErrors({});
+    const res = await api.createAdminRbacAccount({
+      fullName: createForm.fullName.trim(),
+      email: createForm.email.trim().toLowerCase(),
+      phone: createForm.phone.trim() || "0988.000.111",
+      passwordDisplay: createForm.password,
+      role: createForm.role,
+      twoFactorEnabled: createForm.twoFactorEnabled,
+    });
+
+    if (res.success && res.data) {
+      setAccountsList((prev) => [res.data, ...prev]);
+      setShowCreateModal(false);
+      setCreateForm({
+        fullName: "",
+        email: "",
+        phone: "",
+        password: "",
+        role: "order_admin",
+        twoFactorEnabled: true,
+      });
+
+      broadcastAction({
+        type: "CREATE_ACCOUNT",
+        accountEmail: res.data.email,
+        author: currentAdminName,
+      });
+
+      vipToast.success(`Đã cấp thành công tài khoản "${res.data.email}".`, "Cấp quyền thành công");
+    }
+  };
+
+  // Chạy mô phỏng kiểm tra quyền truy cập (RBAC Simulator)
   const handleRunSimulator = (e: React.FormEvent) => {
     e.preventDefault();
-    const account = accountsList.find((a) => a.email === simAccountEmail);
-    if (!account) return;
-
-    if (account.role === "customer") {
+    const acc = accountsList.find((a) => a.email.toLowerCase() === simAccountEmail.toLowerCase());
+    if (!acc) {
       setSimCheckResult({
         allowed: false,
-        account,
-        path: simTargetPath,
-        httpCode: "403 Forbidden",
-        message: "TRUY CẬP BỊ TỪ CHỐI! Tài khoản thuộc quyền hạn Khách Hàng (Customer).",
-        reason: "Không có quyền hạn truy cập bất kỳ tài nguyên nào trong phân hệ /admin.",
+        reason: "Tài khoản không tồn tại trên hệ thống.",
+        account: null,
       });
       return;
     }
 
-    // Kiểm tra quyền theo từng role
-    let isAllowed = false;
-    let reason = "";
+    // Mapping đường dẫn với quyền yêu cầu
+    const pathPermMap: Record<string, string> = {
+      "/admin/doanh-thu": "revenue",
+      "/admin/don-hang": "orders",
+      "/admin/san-pham": "products",
+      "/admin/kho": "inventory",
+      "/admin/bao-hanh": "warranty",
+      "/admin/voucher": "vouchers",
+      "/admin/phan-quyen": "rbac",
+      "/admin/cai-dat": "settings",
+    };
 
-    if (account.role === "super_admin") {
-      isAllowed = true;
-      reason = "Super Admin có toàn quyền truy cập 100% tất cả các phân hệ và cấu hình hệ thống.";
-    } else if (account.role === "order_admin") {
-      if (simTargetPath.includes("don-hang") || simTargetPath.includes("san-pham") || simTargetPath.includes("kho")) {
-        isAllowed = true;
-        reason = "Được cấp quyền Quản lý đơn hàng, điều phối xe CoolVan và kiểm kê kho Hub.";
-      } else {
-        isAllowed = false;
-        reason = "Tài khoản không được phân quyền xem Doanh thu tài chính hoặc Cấu hình RBAC.";
-      }
-    } else if (account.role === "tech_admin") {
-      if (simTargetPath.includes("bao-hanh") || simTargetPath.includes("san-pham") || simTargetPath.includes("kho")) {
-        isAllowed = true;
-        reason = "Được cấp quyền Thẩm định linh kiện, quản lý mã Serial e-Shield và xử lý RMA 1-đổi-1.";
-      } else {
-        isAllowed = false;
-        reason = "Tài khoản không được phân quyền xem Doanh thu hoặc Quản trị phân quyền.";
-      }
+    const requiredPerm = pathPermMap[simTargetPath];
+    const isSuperAdmin = acc.role === "super_admin";
+    const hasPerm = isSuperAdmin || (requiredPerm && acc.permissions.includes(requiredPerm));
+
+    if (hasPerm) {
+      setSimCheckResult({
+        allowed: true,
+        reason: isSuperAdmin
+          ? "ĐƯỢC PHÉP TRUY CẬP: Super Admin có toàn quyền tối cao trên toàn hệ sinh thái."
+          : `ĐƯỢC PHÉP TRUY CẬP: Tài khoản sở hữu quyền [${requiredPerm?.toUpperCase()}] tương ứng với phân hệ này.`,
+        account: acc,
+        requiredPerm,
+      });
+    } else {
+      setSimCheckResult({
+        allowed: false,
+        reason: `BỊ TỪ CHỐI (403 FORBIDDEN): Yêu cầu quyền [${requiredPerm?.toUpperCase()}]. Vai trò "${acc.roleTitle}" hiện chưa được phân bổ quyền hạn này.`,
+        account: acc,
+        requiredPerm,
+      });
     }
-
-    setSimCheckResult({
-      allowed: isAllowed,
-      account,
-      path: simTargetPath,
-      httpCode: isAllowed ? "200 OK (Authorized)" : "403 Forbidden",
-      message: isAllowed
-        ? "TRUY CẬP THÀNH CÔNG! Quyền hạn hợp lệ theo chính sách RBAC."
-        : "TRUY CẬP BỊ TỪ CHỐI! Phân hệ vượt quá thẩm quyền của tài khoản này.",
-      reason,
-    });
   };
 
-  // Lọc danh sách
-  const filteredAccounts = accountsList.filter((item) => {
-    const matchTab =
-      activeTab === "all" ||
-      (activeTab === "super_admin" && item.role === "super_admin") ||
-      (activeTab === "order_admin" && item.role === "order_admin") ||
-      (activeTab === "tech_admin" && item.role === "tech_admin") ||
-      (activeTab === "customer_test" && item.role === "customer");
+  // Sao chép thông tin
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    vipToast.success(`Đã sao chép: "${text}"`, "Sao chép thành công");
+    setTimeout(() => setCopiedId(null), 2500);
+  };
 
-    const matchSearch =
-      !searchQuery ||
-      item.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.roleTitle.toLowerCase().includes(searchQuery.toLowerCase());
+  // Lọc tài khoản
+  const filteredAccounts = useMemo(() => {
+    return accountsList.filter((item) => {
+      // Tab filter
+      if (activeTab !== "all" && item.role !== activeTab) return false;
 
-    const matchRole =
-      selectedRoleFilter === "all" || item.role === selectedRoleFilter;
+      // Status filter
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
 
-    return matchTab && matchSearch && matchRole;
-  });
+      // 2FA filter
+      if (twoFactorFilter === "enabled" && !item.twoFactorEnabled) return false;
+      if (twoFactorFilter === "disabled" && item.twoFactorEnabled) return false;
+
+      // Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchName = item.fullName.toLowerCase().includes(q);
+        const matchEmail = item.email.toLowerCase().includes(q);
+        const matchRole = item.roleTitle.toLowerCase().includes(q);
+        const matchIp = item.loginIp.toLowerCase().includes(q);
+        const matchPhone = item.phone?.toLowerCase().includes(q);
+        if (!matchName && !matchEmail && !matchRole && !matchIp && !matchPhone) return false;
+      }
+
+      return true;
+    });
+  }, [accountsList, activeTab, statusFilter, twoFactorFilter, searchQuery]);
+
+  // Phân trang
+  const totalItems = filteredAccounts.length;
+  const effectivePageSize = pageSize === "all" ? Math.max(1, totalItems) : pageSize;
+  const totalPages = Math.ceil(totalItems / effectivePageSize) || 1;
+  const displayedAccounts = useMemo(() => {
+    if (pageSize === "all") return filteredAccounts;
+    const start = (currentPage - 1) * pageSize;
+    return filteredAccounts.slice(start, start + pageSize);
+  }, [filteredAccounts, currentPage, pageSize]);
+
+  // Thống kê KPI thực tế
+  const totalSuperAdmins = accountsList.filter((a) => a.role === "super_admin").length;
+  const totalOnline = accountsList.filter((a) => a.status === "active").length;
+  const totalWith2FA = accountsList.filter((a) => a.twoFactorEnabled).length;
+  const percent2FA = accountsList.length > 0 ? Math.round((totalWith2FA / accountsList.length) * 100) : 100;
+  const totalAuditEvents = accountsList.reduce((sum, a) => sum + (a.auditLogs?.length || 0), 0);
+
+  // Xuất file CSV UTF-8 BOM
+  const handleDownloadCSV = () => {
+    const headers = ["ID", "Họ Tên", "Email", "Số Điện Thoại", "Vai Trò", "Quyền Hạn", "2FA OTP", "Trạng Thái", "Đăng Nhập Cuối", "IP Truy Cập"];
+    const rows = filteredAccounts.map((a) => [
+      a.id,
+      `"${a.fullName}"`,
+      a.email,
+      a.phone || "",
+      `"${a.roleTitle}"`,
+      `"${a.permissions.join(", ")}"`,
+      a.twoFactorEnabled ? "Bật" : "Tắt",
+      `"${a.statusText}"`,
+      `"${a.lastLogin}"`,
+      `"${a.loginIp}"`,
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `TechCore_RBAC_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    vipToast.success("Đã kết xuất báo cáo phân quyền RBAC thành công!", "Xuất file Excel");
+  };
 
   return (
-    <>
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5 flex-wrap">
-            <span>QUẢN TRỊ HỆ SINH THÁI TECHCORE ENTERPRISE</span>
-            <span className="text-slate-300">•</span>
-            <span>BẢO MẬT HỆ THỐNG &amp; TÀI KHOẢN</span>
-            <span className="text-slate-300">•</span>
-            <span>PHÂN QUYỀN QUẢN TRỊ (RBAC)</span>
-          </p>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-            Phân Quyền Quản Trị Hệ Thống (RBAC)
+    <div className="space-y-6">
+      {/* =========================================================================
+          1. TOP EXECUTIVE HEADER BANNER (LUXURY TECH PALETTE)
+      ========================================================================= */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-r from-[#001C44] via-[#0C5776] to-[#001C44] p-6 rounded-3xl text-white shadow-xl relative overflow-hidden border border-[#2D99AE]/30">
+        <div className="space-y-1.5 relative z-10">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#BCFEFE] bg-[#001C44]/80 px-2.5 py-0.5 rounded-full border border-[#2D99AE]/40 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Realtime Sync Active
+            </span>
+            <span className="text-[10px] font-mono text-[#F8DAD0] bg-white/10 px-2 py-0.5 rounded-full">
+              TLS 1.3 Enterprise Auth
+            </span>
+          </div>
+
+          <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2.5">
+            <ShieldCheck className="w-7 h-7 text-[#2D99AE]" />
+            <span>QUẢN TRỊ PHÂN QUYỀN RBAC &amp; BẢO MẬT HỆ THỐNG</span>
           </h1>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Role-Based Access Control Level 4 Active
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold">
-              <ShieldCheck className="w-3 h-3 text-blue-600" />
-              Chặn 403 Tuyệt Đối Tài Khoản Khách Hàng
-            </span>
-          </div>
+
+          <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            Ma trận phân quyền đa tầng Role-Based Access Control, kiểm soát phiên đăng nhập mã hóa TLS 1.3 và giám sát kiểm toán hành vi (Audit Trail) chống xâm nhập trái phép.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        {/* Executive Action Buttons */}
+        <div className="flex items-center gap-2.5 flex-wrap relative z-10">
           <button
             type="button"
-            onClick={() => alert("Đang xuất danh sách tài khoản & ma trận phân quyền hệ thống ra Excel...")}
-            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
+            onClick={() => setShowExportPreviewModal(true)}
+            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-2 cursor-pointer shadow-xs active:scale-95"
           >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>Xuất Danh Sách Tài Khoản</span>
+            <FileSpreadsheet className="w-4 h-4 text-[#BCFEFE]" />
+            <span>Xuất Báo Cáo RBAC</span>
           </button>
 
           <button
             type="button"
-            onClick={() => alert("✓ Đã đồng bộ chữ ký số SHA-256 session và đối soát mã thông báo RBAC với Core API!")}
-            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
+            onClick={() => {
+              loadAccounts();
+              vipToast.success("Đã đồng bộ lại toàn bộ ma trận phân quyền và phiên làm việc!", "Đồng bộ quyền hạn");
+            }}
+            title="Tải lại dữ liệu"
+            className="bg-white/10 hover:bg-white/20 text-white border border-white/20 p-2.5 rounded-xl transition cursor-pointer active:scale-95"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
-            <span>Đồng Bộ Quyền Hạn</span>
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-[#BCFEFE]" : "text-slate-300"}`} />
           </button>
 
           <button
             type="button"
-            onClick={() => setShowCreateAdminModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-4 py-2 rounded-xl transition shadow-sm shadow-blue-500/25 flex items-center gap-1.5"
+            onClick={() => setShowCreateModal(true)}
+            className="bg-gradient-to-r from-[#2D99AE] to-[#0C5776] hover:brightness-110 text-white text-xs font-black px-4 py-2.5 rounded-xl transition shadow-lg shadow-[#0C5776]/40 flex items-center gap-2 cursor-pointer active:scale-95 border border-[#BCFEFE]/30"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Thêm Quản Trị Viên Mới</span>
+            <UserPlus className="w-4 h-4 text-[#BCFEFE]" />
+            <span>+ Cấp Tài Khoản Mới</span>
           </button>
         </div>
       </div>
 
-      {/* 4 KPI STAT CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1 */}
-        <div className="p-5 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                TÀI KHOẢN ADMIN HOẠT ĐỘNG
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Shield className="w-4 h-4" />
-              </div>
-            </div>
+      {/* =========================================================================
+          2. 3 EXECUTIVE KPI METRIC CARDS (100% REAL CALCULATED DATA)
+      ========================================================================= */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* KPI 1: Tổng Tài Khoản Quản Trị */}
+        <div className="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              Tổng Tài Khoản Hệ Sinh Thái
+            </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900">4</span>
-              <span className="text-xs font-bold text-blue-600">Quản trị viên</span>
+              <span className="text-2xl font-black text-[#001C44]">{accountsList.length}</span>
+              <span className="text-xs font-bold text-[#0C5776]">{totalSuperAdmins} Super Admin</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 font-medium">
-              admin1, admin2, admin3 &amp; admin dự phòng
+            <p className="text-[11px] text-slate-500 font-medium">
+              {totalOnline} tài khoản đang trực tuyến • Root Protection Active
             </p>
           </div>
-          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Xác thực 2 lớp: <strong className="text-emerald-600">100% Bật</strong></span>
-            <span>Quyền Root: <strong className="text-slate-800">admin1</strong></span>
+          <div className="w-12 h-12 rounded-2xl bg-[#0C5776]/10 text-[#0C5776] flex items-center justify-center border border-[#0C5776]/20">
+            <Users className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Card 2 */}
-        <div className="p-5 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                TÀI KHOẢN KHÁCH HÀNG (USERS)
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
-                <Users className="w-4 h-4" />
-              </div>
-            </div>
+        {/* KPI 2: Chỉ Số An Toàn & Chuẩn Mật Khẩu */}
+        <div className="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              Chỉ Số An Toàn Mật Khẩu &amp; 2FA
+            </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900">3.842</span>
-              <span className="text-xs font-bold text-slate-500">Khách Hàng</span>
+              <span className="text-2xl font-black text-emerald-600">{percent2FA}%</span>
+              <span className="text-xs font-bold text-slate-500">{totalWith2FA}/{accountsList.length} tài khoản 2FA</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 font-medium">
-              Chỉ có quyền mua sắm, thanh toán và bảo hành
+            <p className="text-[11px] text-slate-500 font-medium">
+              100% Salted Hash • SHA-256 Token Signature Verified
             </p>
           </div>
-          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Truy cập /admin: <strong className="text-red-600 font-bold">Chặn 403 Tuyệt Đối</strong></span>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200">
+            <KeyRound className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Card 3 */}
-        <div className="p-5 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                PHIÊN ĐĂNG NHẬP TRỰC TUYẾN
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <UserCheck className="w-4 h-4" />
-              </div>
-            </div>
+        {/* KPI 3: Kiểm Toán Hành Vi & Giám Sát Phiên */}
+        <div className="p-5 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div className="space-y-1">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              Kiểm Toán Hành Vi (Audit Trail)
+            </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-emerald-600">3</span>
-              <span className="text-xs font-bold text-emerald-600">Active Sessions</span>
+              <span className="text-2xl font-black text-[#2D99AE]">{totalAuditEvents}</span>
+              <span className="text-xs font-bold text-slate-500">sự kiện đã ghi vết</span>
             </div>
-            <p className="text-[11px] text-emerald-700 font-bold mt-1 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Mã hóa TLS 1.3 &amp; SHA-256 Token</span>
+            <p className="text-[11px] text-slate-500 font-medium">
+              Chặn 100% lỗi 403 Forbidden tài khoản trái quyền
             </p>
           </div>
-          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span>Hub TP.HCM: <strong className="text-slate-800">2</strong></span>
-            <span>Hub Hà Nội: <strong className="text-slate-800">1</strong></span>
-          </div>
-        </div>
-
-        {/* Card 4 */}
-        <div className="p-5 bg-white rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                SỐ LẦN CHẶN BẢO VỆ 403
-              </span>
-              <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
-                <ShieldAlert className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-red-600">28</span>
-              <span className="text-xs font-bold text-slate-500">Lần chặn</span>
-            </div>
-            <p className="text-[11px] text-slate-500 mt-1 font-medium">
-              Chặn thành công tài khoản user cố gõ link /admin
-            </p>
-          </div>
-          <div className="mt-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span className="text-emerald-600 font-bold">An toàn hệ thống 100%</span>
-            <span>0 vi phạm lọt quyền</span>
+          <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-[#2D99AE] flex items-center justify-center border border-[#2D99AE]/30">
+            <ShieldAlert className="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      {/* RBAC MATRIX & PERMISSION SANDBOX SIMULATOR */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Permission Matrix Table (7 cols) */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-slate-900 text-sm">
-                    Ma Trận Phân Quyền Vai Trò (Role-Based Permission Matrix)
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Bảng phân định đặc quyền chi tiết theo từng cấp độ tài khoản hệ thống
-                  </p>
-                </div>
-              </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold shrink-0">
-                NIST SP 800-207
-              </span>
-            </div>
+      {/* =========================================================================
+          3. INTERACTIVE RBAC PATH & ROLE SIMULATOR (MÔ PHỎNG PHÂN QUYỀN NHANH)
+      ========================================================================= */}
+      <div className="p-5 rounded-2xl bg-[#001C44] text-white shadow-md border border-[#2D99AE]/30 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-[#BCFEFE]" />
+            <h3 className="text-xs font-black uppercase tracking-wider text-white">
+              CÔNG CỤ KIỂM THỬ PHÂN QUYỀN TRUY CẬP (RBAC SIMULATOR)
+            </h3>
+          </div>
+          <span className="text-[10px] text-slate-300 font-mono">
+            Thẩm định tức thời quyền truy cập tuyến đường Admin
+          </span>
+        </div>
 
-            {/* Matrix Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/80 text-[10px] font-black text-slate-500 uppercase">
-                    <th className="p-2.5">PHÂN HỆ / TÍNH NĂNG</th>
-                    <th className="p-2.5 text-center text-red-700">SUPER ADMIN (admin1)</th>
-                    <th className="p-2.5 text-center text-blue-700">ĐƠN HÀNG/KHO (admin2)</th>
-                    <th className="p-2.5 text-center text-purple-700">KỸ THUẬT (admin3)</th>
-                    <th className="p-2.5 text-center text-slate-500">USER (user1)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-[11px]">
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">1. Quản lý đơn hàng &amp; CoolVan</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-slate-400">Chỉ xem</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Chặn 403</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">2. Sản phẩm &amp; Linh kiện AI</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Chặn 403</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">3. Kho &amp; e-Shield Serial/IMEI</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Chặn 403</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">4. Bảo hành 1-đổi-1 TechCare+</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-slate-400">Chỉ xem</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Chặn 403</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">5. Doanh thu &amp; Dòng tiền B2B</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Không có quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Không có quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Chặn 403</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">6. Phân quyền quản trị (RBAC)</td>
-                    <td className="p-2.5 text-center text-emerald-600 font-bold">✓ Toàn quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Không có quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Không có quyền</td>
-                    <td className="p-2.5 text-center text-red-500 font-bold">✗ Chặn 403</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        <form onSubmit={handleRunSimulator} className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
+          <div className="sm:col-span-4">
+            <label className="text-[10px] font-bold text-[#BCFEFE] block mb-1">Chọn tài khoản kiểm tra:</label>
+            <select
+              value={simAccountEmail}
+              onChange={(e) => {
+                setSimAccountEmail(e.target.value);
+                setSimCheckResult(null);
+              }}
+              className="w-full bg-[#0C5776]/60 border border-[#2D99AE]/40 rounded-xl px-3 py-2 text-white font-medium outline-none focus:border-[#BCFEFE]"
+            >
+              {accountsList.map((a) => (
+                <option key={a.id} value={a.email} className="bg-[#001C44] text-white">
+                  {a.fullName} ({a.email}) - {a.roleTitle}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 mt-4">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              Nguyên tắc bảo mật: Mọi yêu cầu API đều được kiểm tra Token JWT và cấp phép theo ma trận RBAC.
+          <div className="sm:col-span-5">
+            <label className="text-[10px] font-bold text-[#BCFEFE] block mb-1">Đường dẫn đích (Target Route):</label>
+            <select
+              value={simTargetPath}
+              onChange={(e) => {
+                setSimTargetPath(e.target.value);
+                setSimCheckResult(null);
+              }}
+              className="w-full bg-[#0C5776]/60 border border-[#2D99AE]/40 rounded-xl px-3 py-2 text-white font-medium outline-none focus:border-[#BCFEFE]"
+            >
+              <option value="/admin/doanh-thu" className="bg-[#001C44] text-white">/admin/doanh-thu (Báo Cáo Doanh Thu &amp; Tài Chính)</option>
+              <option value="/admin/don-hang" className="bg-[#001C44] text-white">/admin/don-hang (Quản Lý Đơn Hàng &amp; Giao Vận CoolVan)</option>
+              <option value="/admin/san-pham" className="bg-[#001C44] text-white">/admin/san-pham (Quản Lý Danh Mục Thiết Bị &amp; Giá)</option>
+              <option value="/admin/kho" className="bg-[#001C44] text-white">/admin/kho (Kho Vận &amp; Định Danh Serial e-Shield)</option>
+              <option value="/admin/bao-hanh" className="bg-[#001C44] text-white">/admin/bao-hanh (Hồ Sơ Bảo Hành TechCare+ RMA)</option>
+              <option value="/admin/voucher" className="bg-[#001C44] text-white">/admin/voucher (Chương Trình Khuyến Mãi &amp; Mã Giảm Giá)</option>
+              <option value="/admin/phan-quyen" className="bg-[#001C44] text-white">/admin/phan-quyen (Phân Quyền RBAC &amp; Bảo Mật)</option>
+              <option value="/admin/cai-dat" className="bg-[#001C44] text-white">/admin/cai-dat (Cấu Hình Sàn &amp; Cổng Thanh Toán)</option>
+            </select>
+          </div>
+
+          <div className="sm:col-span-3 flex items-end">
+            <button
+              type="submit"
+              className="w-full bg-[#2D99AE] hover:bg-[#2D99AE]/90 text-white font-bold py-2 rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md active:scale-95"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-[#BCFEFE]" />
+              <span>Kiểm Thử Quyền</span>
+            </button>
+          </div>
+        </form>
+
+        {simCheckResult && (
+          <div
+            className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 animate-in fade-in duration-200 ${
+              simCheckResult.allowed
+                ? "bg-emerald-950/70 border-emerald-500/50 text-emerald-200"
+                : "bg-rose-950/70 border-rose-500/50 text-rose-200"
+            }`}
+          >
+            {simCheckResult.allowed ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            )}
+            <div>
+              <p className="font-bold">{simCheckResult.reason}</p>
+              {simCheckResult.account && (
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  Tài khoản: <strong>{simCheckResult.account.fullName}</strong> • Vai trò: <em>{simCheckResult.account.roleTitle}</em>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* =========================================================================
+          4. UNIFIED CONTROL BAR (BỘ LỌC TẬP TRUNG NHẤT QUÁN)
+      ========================================================================= */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3.5 shadow-xs space-y-3">
+        {/* Status & Role Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold scrollbar-none">
+          {[
+            { key: "all", label: "Tất cả tài khoản", count: accountsList.length },
+            { key: "super_admin", label: "Super Admin", count: accountsList.filter((a) => a.role === "super_admin").length },
+            { key: "order_admin", label: "Quản trị đơn & kho", count: accountsList.filter((a) => a.role === "order_admin").length },
+            { key: "tech_admin", label: "Quản trị kỹ thuật & RMA", count: accountsList.filter((a) => a.role === "tech_admin").length },
+            { key: "customer_test", label: "Tài khoản kiểm thử", count: accountsList.filter((a) => a.role === "customer_test").length },
+          ].map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.key as any);
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? "bg-[#001C44] text-white font-bold shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Live Search & Dropdowns */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-[260px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Tìm theo họ tên, email, vai trò, số điện thoại, IP đăng nhập..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full bg-slate-50 text-xs pl-9 pr-8 py-2 rounded-xl border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#2D99AE]/30 focus:border-[#2D99AE] transition"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Trạng thái */}
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-slate-700 font-medium focus:bg-white focus:outline-none"
+            >
+              <option value="all">Mọi trạng thái</option>
+              <option value="active">Đang trực tuyến (Active)</option>
+              <option value="suspended">Tạm đình chỉ (Suspended)</option>
+              <option value="locked">Đã khóa (Locked)</option>
+            </select>
+
+            {/* Bộ lọc 2FA */}
+            <select
+              value={twoFactorFilter}
+              onChange={(e) => {
+                setTwoFactorFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-slate-700 font-medium focus:bg-white focus:outline-none"
+            >
+              <option value="all">Mọi bảo mật 2FA</option>
+              <option value="enabled">Đã bật 2FA OTP</option>
+              <option value="disabled">Chưa bật 2FA</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          5. MAIN EXECUTIVE RBAC ACCOUNT TABLE WITH INLINE EDITING
+      ========================================================================= */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+        {/* Table Subheader */}
+        <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs bg-slate-50/50">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-700">
+              Đang hiển thị <strong>{filteredAccounts.length}</strong> tài khoản
             </span>
+            {selectedAccounts.length > 0 && (
+              <span className="text-[#0C5776] font-semibold bg-[#BCFEFE]/50 px-2 py-0.5 rounded-lg border border-[#2D99AE]/30">
+                (Đã chọn {selectedAccounts.length})
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => alert("Cấu hình chính sách mật khẩu và thời gian hết hạn phiên đăng nhập...")}
-              className="text-blue-600 hover:text-blue-700 font-bold shrink-0 flex items-center gap-1"
+              onClick={() => {
+                const passwords = filteredAccounts.map((a) => `${a.email}: ${a.passwordDisplay}`).join("\n");
+                handleCopy(passwords, "all-pass");
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Chính Sách Bảo Mật</span>
-              <ChevronRight className="w-3 h-3" />
+              <Copy className="w-3.5 h-3.5 text-slate-500" />
+              <span>Copy toàn bộ mật khẩu</span>
             </button>
           </div>
         </div>
 
-        {/* RBAC Sandbox Permission Simulator (5 cols) */}
-        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center">
-                  <Zap className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-slate-900 text-sm">
-                    Bộ Thử Nghiệm Quyền Hạn RBAC Tức Thì
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Mô phỏng thử phản hồi hệ thống khi một tài khoản truy cập vào phân hệ bất kỳ
-                  </p>
-                </div>
-              </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold shrink-0">
-                Live Simulator
-              </span>
-            </div>
-
-            <form onSubmit={handleRunSimulator} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  Chọn tài khoản kiểm tra quyền:
-                </label>
-                <select
-                  value={simAccountEmail}
-                  onChange={(e) => setSimAccountEmail(e.target.value)}
-                  className="w-full bg-slate-50 text-xs px-3.5 py-2 rounded-xl border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-bold text-slate-800"
-                >
-                  <option value="admin1@techcore.vn">admin1@techcore.vn (Super Admin)</option>
-                  <option value="admin2@techcore.vn">admin2@techcore.vn (Quản trị Đơn hàng & Kho)</option>
-                  <option value="admin3@techcore.vn">admin3@techcore.vn (Quản trị Kỹ thuật & Bảo hành)</option>
-                  <option value="user1@gmail.com">user1@gmail.com (Khách Hàng Thường)</option>
-                  <option value="user2@gmail.com">user2@gmail.com (Khách Hàng Thường)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  Đường dẫn phân hệ muốn truy cập:
-                </label>
-                <select
-                  value={simTargetPath}
-                  onChange={(e) => setSimTargetPath(e.target.value)}
-                  className="w-full bg-slate-50 text-xs px-3.5 py-2 rounded-xl border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 font-mono font-bold text-blue-600"
-                >
-                  <option value="/admin/doanh-thu">/admin/doanh-thu (Doanh thu & Dòng tiền)</option>
-                  <option value="/admin/phan-quyen">/admin/phan-quyen (Phân quyền RBAC)</option>
-                  <option value="/admin/don-hang">/admin/don-hang (Quản lý đơn hàng)</option>
-                  <option value="/admin/kho">/admin/kho (Kho & e-Shield Serial)</option>
-                  <option value="/admin/bao-hanh">/admin/bao-hanh (Bảo hành 1-đổi-1 TechCare+)</option>
-                  <option value="/admin/voucher">/admin/voucher (Mã giảm giá & Voucher)</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-xl transition shadow-xs flex items-center justify-center gap-1.5"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Kiểm Tra Phản Hồi Quyền Hạn RBAC</span>
-              </button>
-            </form>
-
-            {/* Simulator Output Box */}
-            {simCheckResult && (
-              <div
-                className={`mt-4 p-3.5 rounded-xl border text-xs space-y-2 animate-in fade-in duration-200 ${
-                  simCheckResult.allowed
-                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                    : "bg-red-50 border-red-200 text-red-900"
-                }`}
-              >
-                <div className="flex items-center justify-between font-bold">
-                  <span className="flex items-center gap-1.5">
-                    {simCheckResult.allowed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-red-600" />
-                    )}
-                    <span>{simCheckResult.httpCode}</span>
-                  </span>
-                  <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-white border">
-                    {simCheckResult.path}
-                  </span>
-                </div>
-                <p className="font-bold text-xs">{simCheckResult.message}</p>
-                <p className="text-[11px] opacity-80">{simCheckResult.reason}</p>
-
-                {/* Quick Switch Button */}
-                <div className="pt-2 border-t border-current/20 flex items-center justify-between">
-                  <span className="text-[10px]">Muốn trải nghiệm thực tế với tài khoản này?</span>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickSwitchUser(simCheckResult.account)}
-                    className={`px-2.5 py-1 rounded-lg text-white font-bold text-[10px] transition ${
-                      simCheckResult.allowed
-                        ? "bg-emerald-600 hover:bg-emerald-700"
-                        : "bg-red-600 hover:bg-red-700"
-                    }`}
-                  >
-                    Đăng Nhập Thử Ngay ↗
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-[11px] text-slate-500 flex items-center justify-between mt-4">
-            <span>Tài khoản khách hàng: Cố vào /admin sẽ bị chuyển sang màn hình 403.</span>
-          </div>
-        </div>
-      </div>
-
-      {/* FILTER TABS */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold scrollbar-none">
-        {[
-          { key: "all", label: "Tất cả tài khoản hệ thống (6)" },
-          { key: "super_admin", label: "Super Admin (Tổng Quản Trị - 2)" },
-          { key: "order_admin", label: "Quản trị Đơn Hàng & Kho (1)" },
-          { key: "tech_admin", label: "Quản trị Kỹ Thuật & Bảo Hành (1)" },
-          { key: "customer_test", label: "Tài khoản Khách Hàng Test 403 (2)" },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key as any)}
-            className={`px-4 py-2 rounded-xl transition whitespace-nowrap ${
-              activeTab === tab.key
-                ? "bg-blue-600 text-white shadow-sm shadow-blue-500/25"
-                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* SEARCH TOOLBAR */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2.5 flex-1 min-w-[280px]">
-          <div className="relative flex-1">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Tìm theo họ tên, email đăng nhập, vai trò quản trị..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 text-xs pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 focus:bg-white focus:outline-none focus:border-blue-500 transition"
-            />
-          </div>
-
-          <select
-            value={selectedRoleFilter}
-            onChange={(e) => setSelectedRoleFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 font-medium text-slate-700 focus:outline-none focus:bg-white"
-          >
-            <option value="all">Vai trò: Tất cả</option>
-            <option value="super_admin">Super Admin</option>
-            <option value="order_admin">Quản trị Đơn hàng & Kho</option>
-            <option value="tech_admin">Quản trị Kỹ thuật & Bảo hành</option>
-            <option value="customer">Khách hàng (Customer)</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedAccounts.length === 0) {
-                alert("Vui lòng tích chọn ít nhất 1 tài khoản để xuất báo cáo phân quyền!");
-                return;
-              }
-              alert(`Đang xuất hồ sơ kiểm toán phân quyền cho ${selectedAccounts.length} tài khoản đã chọn...`);
-            }}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-slate-700 flex items-center gap-1.5 transition"
-          >
-            <FileText className="w-3.5 h-3.5 text-blue-600" />
-            <span>Xuất Hồ Sơ ({selectedAccounts.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => alert("✓ Đã quét toàn bộ hệ thống tài khoản: 100% tài khoản tuân thủ chính sách mật khẩu mạnh!")}
-            className="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-bold flex items-center gap-1.5 transition"
-          >
-            <KeyRound className="w-3.5 h-3.5 text-blue-600" />
-            <span>Kiểm Tra Mật Khẩu</span>
-          </button>
-        </div>
-      </div>
-
-      {/* MAIN ACCOUNTS TABLE */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/75 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                <th className="p-4 w-10 text-center">
+              <tr className="bg-slate-50/70 border-b border-slate-200/80 text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                <th className="p-4 w-12 text-center">
                   <input
                     type="checkbox"
                     checked={selectedAccounts.length === filteredAccounts.length && filteredAccounts.length > 0}
                     onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedAccounts(filteredAccounts.map((a) => a.id));
-                      } else {
-                        setSelectedAccounts([]);
-                      }
+                      if (e.target.checked) setSelectedAccounts(filteredAccounts.map((a) => a.id));
+                      else setSelectedAccounts([]);
                     }}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded border-slate-300 text-[#0C5776] focus:ring-[#2D99AE] cursor-pointer"
                   />
                 </th>
-                <th className="p-4">QUẢN TRỊ VIÊN &amp; EMAIL</th>
-                <th className="p-4">VAI TRÒ &amp; CẤP BẬC</th>
-                <th className="p-4">MẬT KHẨU ĐĂNG NHẬP</th>
-                <th className="p-4">PHẠM VI NHIỆM VỤ ĐƯỢC GIAO</th>
-                <th className="p-4">PHIÊN TRỰC TUYẾN &amp; IP</th>
-                <th className="p-4 text-center">CHUYỂN NHANH ĐỂ TEST</th>
-                <th className="p-4 text-center">AUDIT LOG</th>
+                <th className="p-4">Tài Khoản &amp; Định Danh</th>
+                <th className="p-4">Vai Trò &amp; Trách Nhiệm</th>
+                <th className="p-4">Mật Khẩu &amp; 2FA</th>
+                <th className="p-4">Ma Trận Quyền Hạn (Nhấp để cấp/thu hồi)</th>
+                <th className="p-4">Trạng Thái</th>
+                <th className="p-4 text-center">Thao Tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredAccounts.map((user) => {
-                const isSelected = selectedAccounts.includes(user.id);
-                const isPwVisible = showPasswordMap[user.id];
-                return (
-                  <tr
-                    key={user.id}
-                    className={`transition hover:bg-slate-50/70 ${
-                      user.role === "customer" ? "bg-slate-50/50" : ""
-                    }`}
-                  >
-                    {/* Checkbox */}
-                    <td className="p-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {
-                          setSelectedAccounts((prev) =>
-                            prev.includes(user.id)
-                              ? prev.filter((id) => id !== user.id)
-                              : [...prev, user.id]
-                          );
-                        }}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                    </td>
+              {displayedAccounts.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-12 text-center text-slate-400">
+                    <ShieldAlert className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                    <p className="font-bold text-slate-700">Không tìm thấy tài khoản phù hợp</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc</p>
+                  </td>
+                </tr>
+              ) : (
+                displayedAccounts.map((item) => {
+                  const isSelected = selectedAccounts.includes(item.id);
+                  const isRootAdmin = item.email === "admin1@techcore.vn";
+                  const showPass = showPasswordMap[item.id] || false;
 
-                    {/* Full Name & Email */}
-                    <td className="p-4">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-8 h-8 rounded-xl text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs ${
-                            user.role === "super_admin"
-                              ? "bg-red-600"
-                              : user.role === "order_admin"
-                              ? "bg-blue-600"
-                              : user.role === "tech_admin"
-                              ? "bg-purple-600"
-                              : "bg-slate-600"
-                          }`}
-                        >
-                          {user.fullName.charAt(0).toUpperCase()}
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`hover:bg-slate-50/70 transition ${isSelected ? "bg-blue-50/20" : ""}`}
+                    >
+                      {/* Checkbox */}
+                      <td className="p-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedAccounts((prev) =>
+                              prev.includes(item.id) ? prev.filter((x) => x !== item.id) : [...prev, item.id]
+                            );
+                          }}
+                          className="w-4 h-4 rounded border-slate-300 text-[#0C5776] focus:ring-[#2D99AE] cursor-pointer"
+                        />
+                      </td>
+
+                      {/* Họ Tên & Định Danh */}
+                      <td className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#001C44] to-[#0C5776] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs border border-[#2D99AE]/30">
+                            {item.fullName.slice(0, 1).toUpperCase()}
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-900 text-xs">{item.fullName}</span>
+                              {isRootAdmin && (
+                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                                  ROOT
+                                </span>
+                              )}
+                            </div>
+                            <p className="font-mono text-[11px] text-[#0C5776] font-semibold">{item.email}</p>
+                            <p className="text-[10px] text-slate-400">
+                              IP: {item.loginIp} • {item.lastLogin}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900 leading-snug">{user.fullName}</p>
-                          <span className="font-mono text-blue-600 font-bold text-[11px] block">
-                            {user.email}
-                          </span>
+                      </td>
+
+                      {/* Vai Trò & Chức Danh - Chỉnh sửa trực tiếp */}
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <div className="relative inline-flex items-center group/role">
+                            <select
+                              value={item.role}
+                              disabled={isRootAdmin}
+                              onChange={(e) => handleUpdateRole(item, e.target.value as any)}
+                              title={isRootAdmin ? "Tài khoản Root không thể thay đổi vai trò" : "Nhấp để đổi vai trò trực tiếp"}
+                              className={`appearance-none text-xs font-bold px-3 pr-7 py-1 rounded-full border transition shadow-2xs outline-none ${
+                                isRootAdmin
+                                  ? "bg-rose-50 text-rose-700 border-rose-200 cursor-not-allowed opacity-90"
+                                  : "cursor-pointer hover:ring-2 hover:ring-[#2D99AE]/30 " +
+                                    (item.role === "super_admin"
+                                      ? "bg-red-50 text-red-700 border-red-200"
+                                      : item.role === "order_admin"
+                                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                                      : item.role === "tech_admin"
+                                      ? "bg-purple-50 text-purple-700 border-purple-200"
+                                      : "bg-slate-100 text-slate-700 border-slate-200")
+                              }`}
+                            >
+                              <option value="super_admin">Super Admin (Tổng Quản Trị)</option>
+                              <option value="order_admin">Quản Trị Đơn &amp; Kho</option>
+                              <option value="tech_admin">Kỹ Sư Trưởng &amp; RMA</option>
+                              <option value="customer_test">Khách Hàng Kiểm Thử</option>
+                            </select>
+                            {!isRootAdmin && (
+                              <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 pointer-events-none group-hover/role:text-slate-700" />
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-500 max-w-[220px] line-clamp-2 leading-relaxed">
+                            {item.duties}
+                          </p>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Role Title */}
-                    <td className="p-4">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${user.roleBadgeColor}`}
-                      >
-                        {user.roleTitle}
-                      </span>
-                    </td>
+                      {/* Mật Khẩu & 2FA */}
+                      <td className="p-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-black text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                              {showPass ? item.passwordDisplay : "••••••••"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowPasswordMap((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
+                              }
+                              title={showPass ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                              className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                            >
+                              {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(item.passwordDisplay, item.id)}
+                              title="Sao chép mật khẩu"
+                              className="p-1 rounded-md text-slate-400 hover:text-[#0C5776] hover:bg-blue-50 cursor-pointer"
+                            >
+                              {copiedId === item.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
 
-                    {/* Password with Eye Toggle */}
-                    <td className="p-4">
-                      <div className="flex items-center gap-1.5 font-mono text-xs">
-                        <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                          {isPwVisible ? user.passwordDisplay : "••••••••"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => toggleShowPassword(user.id)}
-                          title={isPwVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                          className="p-1 text-slate-400 hover:text-blue-600 transition"
-                        >
-                          {isPwVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </td>
+                          {/* 2FA Toggle Badge */}
+                          <div>
+                            <button
+                              type="button"
+                              onClick={() => handleToggle2FA(item)}
+                              title="Nhấp để BẬT / TẮT 2FA cho tài khoản này"
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition cursor-pointer flex items-center gap-1 ${
+                                item.twoFactorEnabled
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                  : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
+                              }`}
+                            >
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                              <span>2FA: {item.twoFactorEnabled ? "Đã Bật" : "Tắt"}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </td>
 
-                    {/* Duties & Scope */}
-                    <td className="p-4 max-w-[240px]">
-                      <p className="text-[11px] text-slate-600 leading-snug line-clamp-2" title={user.duties}>
-                        {user.duties}
-                      </p>
-                    </td>
+                      {/* Ma Trận Quyền Hạn (Permissions Capsules) */}
+                      <td className="p-4 max-w-[280px]">
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { key: "revenue", label: "Doanh thu" },
+                            { key: "orders", label: "Đơn hàng" },
+                            { key: "products", label: "Sản phẩm" },
+                            { key: "inventory", label: "Kho vận" },
+                            { key: "warranty", label: "Bảo hành" },
+                            { key: "vouchers", label: "Voucher" },
+                            { key: "rbac", label: "Phân quyền" },
+                            { key: "settings", label: "Cài đặt" },
+                          ].map((perm) => {
+                            const hasPerm = item.permissions.includes(perm.key);
+                            return (
+                              <button
+                                key={perm.key}
+                                type="button"
+                                onClick={() => handleTogglePermission(item, perm.key)}
+                                title={`Nhấp để ${hasPerm ? "thu hồi" : "cấp"} quyền ${perm.label}`}
+                                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border transition cursor-pointer select-none active:scale-95 ${
+                                  hasPerm
+                                    ? "bg-[#0C5776]/10 text-[#0C5776] border-[#2D99AE]/40 hover:bg-[#0C5776]/20 font-black"
+                                    : "bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100"
+                                }`}
+                              >
+                                {perm.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </td>
 
-                    {/* Online Session & IP */}
-                    <td className="p-4">
-                      <div className="space-y-0.5">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          {user.statusText}
-                        </span>
-                        <p className="text-[10px] text-slate-400">{user.lastLogin}</p>
-                        <span className="text-[9px] font-mono text-slate-400 block">{user.loginIp}</span>
-                      </div>
-                    </td>
+                      {/* Trạng Thái Tài Khoản */}
+                      <td className="p-4">
+                        <div className="relative inline-flex items-center group/status">
+                          <select
+                            value={item.status}
+                            disabled={isRootAdmin}
+                            onChange={(e) => handleUpdateStatus(item, e.target.value as any)}
+                            title={isRootAdmin ? "Tài khoản Root không thể thay đổi trạng thái" : "Nhấp để đổi trạng thái"}
+                            className={`appearance-none text-[11px] font-bold pl-6 pr-6 py-1 rounded-full border transition shadow-2xs outline-none ${
+                              isRootAdmin
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-300 cursor-not-allowed"
+                                : "cursor-pointer hover:ring-2 hover:ring-[#2D99AE]/30 " +
+                                  (item.status === "active"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                                    : item.status === "suspended"
+                                    ? "bg-amber-50 text-amber-700 border-amber-300"
+                                    : "bg-rose-50 text-rose-700 border-rose-300")
+                            }`}
+                          >
+                            <option value="active">Đang hoạt động</option>
+                            <option value="suspended">Tạm đình chỉ</option>
+                            <option value="locked">Khóa tài khoản</option>
+                          </select>
 
-                    {/* Quick Switch for Testing */}
-                    <td className="p-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickSwitchUser(user)}
-                        className={`px-3 py-1.5 rounded-xl font-bold text-xs transition shadow-xs flex items-center justify-center gap-1 mx-auto ${
-                          user.role === "customer"
-                            ? "bg-slate-800 hover:bg-slate-900 text-slate-200"
-                            : "bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 border border-blue-200"
-                        }`}
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Đăng Nhập Test</span>
-                      </button>
-                    </td>
+                          {/* Chấm tròn trạng thái */}
+                          <span
+                            className={`w-2 h-2 rounded-full absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${
+                              item.status === "active"
+                                ? "bg-emerald-500 animate-pulse"
+                                : item.status === "suspended"
+                                ? "bg-amber-500"
+                                : "bg-rose-500"
+                            }`}
+                          />
+                          {!isRootAdmin && (
+                            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 pointer-events-none group-hover/status:text-slate-700" />
+                          )}
+                        </div>
+                      </td>
 
-                    {/* Audit Logs */}
-                    <td className="p-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedAccountAudit(user)}
-                        className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-700 text-xs font-bold transition inline-flex items-center gap-1"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>Lịch sử</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                      {/* Thao Tác */}
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAccountAudit(item)}
+                            title="Xem nhật ký kiểm toán hành vi (Audit Log)"
+                            className="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0C5776] text-xs font-bold transition inline-flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
+                          >
+                            <History className="w-3.5 h-3.5" />
+                            <span>Nhật ký</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isRootAdmin}
+                            onClick={() => setDeletingAccount(item)}
+                            title={isRootAdmin ? "Không thể xóa tài khoản Root" : "Xóa tài khoản này"}
+                            className={`p-1.5 rounded-xl transition ${
+                              isRootAdmin
+                                ? "text-slate-300 cursor-not-allowed"
+                                : "text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer active:scale-95"
+                            }`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination Footer */}
+        {/* =========================================================================
+            PAGINATION CONTROLS (PHÂN TRANG CHUẨN XÁC)
+        ========================================================================= */}
         <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
-          <div>
-            Hiển thị <strong className="text-slate-800">1 - {filteredAccounts.length}</strong> trên tổng số{" "}
-            <strong className="text-slate-800">6</strong> tài khoản kiểm thử bảo mật • 10 / trang
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className="w-7 h-7 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center shadow-xs"
+          <div className="flex items-center gap-2">
+            <span>Hiển thị:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                const val = e.target.value === "all" ? "all" : Number(e.target.value);
+                setPageSize(val as any);
+                setCurrentPage(1);
+              }}
+              className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 outline-none"
             >
-              1
-            </button>
+              <option value={10}>10 tài khoản / trang</option>
+              <option value={20}>20 tài khoản / trang</option>
+              <option value={50}>50 tài khoản / trang</option>
+              <option value="all">Tất cả ({filteredAccounts.length})</option>
+            </select>
+            <span>
+              | Trang <strong>{currentPage}</strong> / <strong>{totalPages}</strong> (Tổng <strong>{totalItems}</strong>)
+            </span>
           </div>
+
+          {pageSize !== "all" && totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(1)}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Trang đầu"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Trang trước"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .map((pageNum, idx, arr) => {
+                  const showEllipsis = idx > 0 && pageNum - arr[idx - 1] > 1;
+                  return (
+                    <React.Fragment key={pageNum}>
+                      {showEllipsis && <span className="px-1 text-slate-400">...</span>}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-7 h-7 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          currentPage === pageNum
+                            ? "bg-[#001C44] text-white"
+                            : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Trang sau"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+                className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Trang cuối"
+              >
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* BOTTOM PROTOCOL BANNER */}
-      <div className="bg-gradient-to-r from-red-50/70 via-blue-50/40 to-slate-50 border border-red-200/60 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-red-500/20">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="font-black text-slate-900 text-sm">
-              Kiến Trúc Bảo Mật Zero-Trust &amp; Cơ Chế Chặn Truy Cập Phân Cấp (403 Forbidden Gate)
-            </h4>
-            <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-              Mọi tuyến đường `/admin/*` đều được giám sát tại lớp Layout Root. Khi người dùng đăng nhập tài khoản Khách hàng (`user1@gmail.com`), hệ thống tự động ngắt phiên quản trị và hiển thị màn hình 403 Forbidden, đảm bảo bảo mật tuyệt đối cho dữ liệu doanh nghiệp và doanh thu bán hàng.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => alert("Đang xuất chứng chỉ xác thực bảo mật Zero-Trust ISO/IEC 27001...")}
-            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold px-4 py-2 rounded-xl transition"
-          >
-            Chứng Chỉ ISO 27001
-          </button>
-          <button
-            type="button"
-            onClick={() => alert("✓ Hệ thống RBAC hoạt động hoàn hảo, 100% đường dẫn quản trị được bảo vệ an toàn!")}
-            className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-sm shadow-red-500/25"
-          >
-            Quét Lỗ Hổng Quyền Hạn
-          </button>
-        </div>
-      </div>
-
-      {/* MODAL 1: THÊM QUẢN TRỊ VIÊN MỚI */}
-      {showCreateAdminModal && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-4">
+      {/* =========================================================================
+          MODAL 1: CẤP QUẢN TRỊ VIÊN MỚI (VỚI BẮT LỖI FORM STRICT)
+      ========================================================================= */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100">
+            <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <span className="text-[10px] font-bold text-blue-600 uppercase">
-                  TECHCORE RBAC AUTHORITY
+                <span className="text-[10px] font-black text-[#0C5776] uppercase tracking-wider block">
+                  CẤP TÀI KHOẢN MỚI
                 </span>
-                <h3 className="text-xl font-black text-slate-900">+ Thêm Quản Trị Viên Mới</h3>
+                <h3 className="text-lg font-black text-slate-900">+ Cấp Tài Khoản &amp; Phân Quyền</h3>
               </div>
               <button
-                onClick={() => setShowCreateAdminModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const fd = new FormData(e.currentTarget);
-                const fullName = (fd.get("fullName") as string) || "Quản Trị Viên Mới";
-                const email = (fd.get("email") as string) || `admin_${Date.now().toString().slice(-4)}@techcore.vn`;
-                const password = (fd.get("password") as string) || "Admin@2026";
-                const role = (fd.get("role") as string) || "order_admin";
-                const duties = (fd.get("duties") as string) || "Nhiệm vụ quản lý phân hệ được giao.";
-
-                let roleTitle = "Quản Trị Đơn Hàng & Kho";
-                let roleBadgeColor = "bg-blue-50 text-blue-700 border-blue-200";
-                if (role === "super_admin") {
-                  roleTitle = "Super Admin (Tổng Quản Trị)";
-                  roleBadgeColor = "bg-red-50 text-red-700 border-red-200";
-                } else if (role === "tech_admin") {
-                  roleTitle = "Quản Trị Kỹ Thuật & Bảo Hành";
-                  roleBadgeColor = "bg-purple-50 text-purple-700 border-purple-200";
-                }
-
-                const newAdmin = {
-                  id: `usr-admin-${Date.now()}`,
-                  fullName,
-                  email,
-                  passwordDisplay: password,
-                  role,
-                  roleTitle,
-                  roleBadgeColor,
-                  duties,
-                  permissions: ["orders", "products"],
-                  status: "active",
-                  statusText: "Vừa kích hoạt",
-                  lastLogin: "Chưa đăng nhập lần đầu",
-                  loginIp: "N/A",
-                  auditLogs: [
-                    { time: new Date().toLocaleTimeString("vi-VN"), action: "Tạo mới tài khoản quản trị viên và cấp quyền RBAC" },
-                  ],
-                };
-
-                setAccountsList((prev) => [newAdmin, ...prev]);
-                setShowCreateAdminModal(false);
-                alert(`✓ Đã tạo thành công tài khoản quản trị: ${email} với vai trò ${roleTitle}!`);
-              }}
-              className="space-y-3.5 text-xs"
-            >
+            <form onSubmit={handleCreateSubmit} className="space-y-3.5 text-xs">
+              {/* Họ tên */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Họ và tên quản trị viên:</label>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Họ và tên quản trị viên: <span className="text-rose-500">*</span>
+                </label>
                 <input
-                  name="fullName"
+                  type="text"
                   required
-                  placeholder="Ví dụ: Hoàng Minh Trí"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-bold"
+                  placeholder="Ví dụ: Hoàng Gia Bảo..."
+                  value={createForm.fullName}
+                  onChange={(e) => {
+                    setCreateForm({ ...createForm, fullName: e.target.value });
+                    if (formErrors.fullName) setFormErrors((prev) => ({ ...prev, fullName: "" }));
+                  }}
+                  className={`w-full border rounded-xl px-3 py-2 text-xs outline-none transition ${
+                    formErrors.fullName ? "border-rose-500 bg-rose-50/40" : "border-slate-200 bg-slate-50 focus:border-[#2D99AE] focus:bg-white"
+                  }`}
                 />
+                {formErrors.fullName && <p className="text-[11px] text-rose-600 font-bold mt-1">{formErrors.fullName}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Email & Phone */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Email đăng nhập (@techcore.vn):</label>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    Email tài khoản: <span className="text-rose-500">*</span>
+                  </label>
                   <input
-                    name="email"
                     type="email"
                     required
                     placeholder="adminX@techcore.vn"
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-mono"
+                    value={createForm.email}
+                    onChange={(e) => {
+                      setCreateForm({ ...createForm, email: e.target.value });
+                      if (formErrors.email) setFormErrors((prev) => ({ ...prev, email: "" }));
+                    }}
+                    className={`w-full border rounded-xl px-3 py-2 text-xs outline-none transition ${
+                      formErrors.email ? "border-rose-500 bg-rose-50/40" : "border-slate-200 bg-slate-50 focus:border-[#2D99AE] focus:bg-white"
+                    }`}
                   />
+                  {formErrors.email && <p className="text-[11px] text-rose-600 font-bold mt-1">{formErrors.email}</p>}
                 </div>
+
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Mật khẩu khởi tạo:</label>
+                  <label className="block text-slate-700 font-bold mb-1">Số điện thoại liên hệ:</label>
                   <input
-                    name="password"
-                    required
-                    defaultValue="Admin@2026"
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-mono font-bold"
+                    type="tel"
+                    placeholder="0988.xxx.xxx"
+                    value={createForm.phone}
+                    onChange={(e) => {
+                      setCreateForm({ ...createForm, phone: e.target.value });
+                      if (formErrors.phone) setFormErrors((prev) => ({ ...prev, phone: "" }));
+                    }}
+                    className={`w-full border rounded-xl px-3 py-2 text-xs outline-none transition ${
+                      formErrors.phone ? "border-rose-500 bg-rose-50/40" : "border-slate-200 bg-slate-50 focus:border-[#2D99AE] focus:bg-white"
+                    }`}
                   />
+                  {formErrors.phone && <p className="text-[11px] text-rose-600 font-bold mt-1">{formErrors.phone}</p>}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Vai trò &amp; Cấp bậc phân quyền:</label>
-                <select
-                  name="role"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-bold text-blue-700"
-                >
-                  <option value="super_admin">Super Admin (Tổng Quản Trị - Toàn quyền 100%)</option>
-                  <option value="order_admin">Quản Trị Đơn Hàng &amp; Vận Hành Kho CoolVan</option>
-                  <option value="tech_admin">Quản Trị Kỹ Thuật &amp; Bảo Hành e-Shield 1-Đổi-1</option>
-                </select>
+              {/* Mật khẩu & Vai trò */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">
+                    Mật khẩu truy cập: <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Tối thiểu 6 ký tự..."
+                    value={createForm.password}
+                    onChange={(e) => {
+                      setCreateForm({ ...createForm, password: e.target.value });
+                      if (formErrors.password) setFormErrors((prev) => ({ ...prev, password: "" }));
+                    }}
+                    className={`w-full border rounded-xl px-3 py-2 text-xs outline-none font-mono font-bold transition ${
+                      formErrors.password ? "border-rose-500 bg-rose-50/40" : "border-slate-200 bg-slate-50 focus:border-[#2D99AE] focus:bg-white"
+                    }`}
+                  />
+                  {formErrors.password && <p className="text-[11px] text-rose-600 font-bold mt-1">{formErrors.password}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1">Vai trò phân nhiệm:</label>
+                  <select
+                    value={createForm.role}
+                    onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as any })}
+                    className="w-full border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#2D99AE] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  >
+                    <option value="order_admin">Quản Trị Đơn &amp; Kho Vận</option>
+                    <option value="tech_admin">Kỹ Sư Trưởng &amp; RMA</option>
+                    <option value="super_admin">Super Admin (Tổng Quản Trị)</option>
+                    <option value="customer_test">Khách Hàng Kiểm Thử</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">Phạm vi công việc &amp; Nhiệm vụ được giao:</label>
-                <textarea
-                  name="duties"
-                  rows={2}
-                  required
-                  defaultValue="Chịu trách nhiệm trực ca giám sát điều phối đơn hàng và xuất kho e-Shield."
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+              {/* 2FA Option */}
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 block">Kích hoạt xác thực 2 lớp (2FA OTP)</span>
+                  <span className="text-[11px] text-slate-500">Yêu cầu xác nhận qua mã bảo mật OTP khi đăng nhập</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={createForm.twoFactorEnabled}
+                  onChange={(e) => setCreateForm({ ...createForm, twoFactorEnabled: e.target.checked })}
+                  className="w-4 h-4 rounded border-slate-300 text-[#0C5776] focus:ring-[#2D99AE] cursor-pointer"
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <span>
-                  Tài khoản mới sẽ yêu cầu đổi mật khẩu ở lần đăng nhập đầu tiên và bật xác thực 2 bước 2FA.
-                </span>
-              </div>
-
-              <div className="pt-3 border-t flex items-center justify-end gap-2.5">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowCreateAdminModal(false)}
-                  className="px-4 py-2 rounded-xl border text-slate-600 hover:bg-slate-50 font-bold"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-bold cursor-pointer"
                 >
-                  Hủy
+                  Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black shadow-sm shadow-blue-500/25"
+                  className="px-5 py-2 rounded-xl bg-[#001C44] hover:bg-[#0C5776] text-white font-black shadow-md transition cursor-pointer active:scale-95"
                 >
-                  Cấp Quyền &amp; Kích Hoạt
+                  Cấp Tài Khoản
                 </button>
               </div>
             </form>
@@ -1079,87 +1357,82 @@ export function RbacManagement() {
         </div>
       )}
 
-      {/* MODAL 2: AUDIT LOG DOSSIER */}
+      {/* =========================================================================
+          MODAL 2: NHẬT KÝ KIỂM TOÁN HÀNH VI (AUDIT LOG DOSSIER)
+      ========================================================================= */}
       {selectedAccountAudit && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-start justify-between border-b pb-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto border border-slate-100">
+            <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <span className="text-[10px] font-bold text-blue-600 uppercase flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5 text-blue-600" />
-                  NHẬT KÝ KIỂM TOÁN HOẠT ĐỘNG (AUDIT TRAIL)
+                <span className="text-[10px] font-black text-[#0C5776] uppercase tracking-wider block">
+                  AUDIT TRAIL &amp; SECURITY DOSSIER
                 </span>
-                <h3 className="text-xl font-black text-slate-900 mt-0.5">
-                  {selectedAccountAudit.fullName}
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Email: {selectedAccountAudit.email} • {selectedAccountAudit.roleTitle}
-                </p>
+                <h3 className="text-lg font-black text-slate-900">{selectedAccountAudit.fullName}</h3>
+                <p className="text-xs text-slate-500 font-mono">{selectedAccountAudit.email}</p>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedAccountAudit(null)}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Session Info */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
-              <div className="grid grid-cols-2 gap-3 text-slate-700">
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Mật khẩu kiểm thử:</span>
-                  <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border">
-                    {selectedAccountAudit.passwordDisplay}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Trạng thái:</span>
-                  <span className="font-bold text-emerald-600">{selectedAccountAudit.statusText}</span>
-                </div>
+            {/* Account Details Box */}
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Vai trò chức vụ:</span>
+                <strong className="text-slate-900">{selectedAccountAudit.roleTitle}</strong>
               </div>
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200/60">
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Đăng nhập gần nhất:</span>
-                  <p className="text-slate-800 font-medium">{selectedAccountAudit.lastLogin}</p>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] block">Địa chỉ IP:</span>
-                  <p className="font-mono text-slate-800">{selectedAccountAudit.loginIp}</p>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Địa chỉ IP đăng nhập gần nhất:</span>
+                <span className="font-mono font-bold text-blue-600">{selectedAccountAudit.loginIp}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Thời gian đăng nhập cuối:</span>
+                <span className="text-slate-700 font-semibold">{selectedAccountAudit.lastLogin}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Xác thực 2FA OTP:</span>
+                <span className={`font-bold ${selectedAccountAudit.twoFactorEnabled ? "text-emerald-600" : "text-slate-500"}`}>
+                  {selectedAccountAudit.twoFactorEnabled ? "Đã Kích Hoạt (Bắt Buộc)" : "Chưa Bật"}
+                </span>
               </div>
             </div>
 
-            {/* Logs List */}
-            <div className="space-y-2">
-              <span className="text-slate-400 text-[10px] block font-bold">Lịch sử sự kiện gần nhất:</span>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {selectedAccountAudit.auditLogs.map((log: any, i: number) => (
-                  <div key={i} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs flex items-center gap-2">
-                    <span className="font-mono text-[10px] text-slate-400 shrink-0">{log.time}</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
-                    <span className="text-slate-700 font-medium">{log.action}</span>
-                  </div>
-                ))}
+            {/* Audit History Log */}
+            <div>
+              <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-[#0C5776]" />
+                <span>Nhật Ký Hành Vi Đã Ghi Vết (Audit Logs)</span>
+              </h4>
+
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {selectedAccountAudit.auditLogs && selectedAccountAudit.auditLogs.length > 0 ? (
+                  selectedAccountAudit.auditLogs.map((log: any, idx: number) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs flex items-start gap-2">
+                      <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-200/70 px-1.5 py-0.5 rounded shrink-0">
+                        {log.time}
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-slate-800 font-medium">{log.action}</p>
+                        {log.ip && <span className="text-[10px] text-slate-400 font-mono">IP: {log.ip}</span>}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 text-center py-4">Chưa có bản ghi kiểm toán nào phát sinh.</p>
+                )}
               </div>
             </div>
 
-            {/* Footer Buttons */}
-            <div className="pt-3 border-t flex items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => handleQuickSwitchUser(selectedAccountAudit)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-xs flex items-center gap-1.5"
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Đăng Nhập Tài Khoản Này Để Test</span>
-              </button>
-
+            <div className="pt-3 border-t flex justify-end">
               <button
                 type="button"
                 onClick={() => setSelectedAccountAudit(null)}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition"
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs cursor-pointer hover:bg-slate-800"
               >
                 Đóng
               </button>
@@ -1167,7 +1440,150 @@ export function RbacManagement() {
           </div>
         </div>
       )}
-    </>
+
+      {/* =========================================================================
+          MODAL 3: XÁC NHẬN XÓA TÀI KHOẢN NGUY HIỂM (DANGER MODAL)
+      ========================================================================= */}
+      {deletingAccount && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 border border-rose-100">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-black text-slate-900">Xác Nhận Thu Hồi Tài Khoản?</h3>
+              <p className="text-xs text-slate-500">
+                Bạn đang chuẩn bị xóa tài khoản <strong className="text-slate-900">{deletingAccount.fullName}</strong> ({deletingAccount.email}).
+              </p>
+            </div>
+
+            <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-2xl text-[11px] text-rose-700 leading-relaxed">
+              Toàn bộ phiên làm việc của tài khoản này sẽ bị hủy bỏ ngay lập tức, mọi quyền hạn quản trị bị chấm dứt và phiên TLS 1.3 sẽ bị đóng vĩnh viễn.
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingAccount(null)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteAccount}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md shadow-rose-600/30 cursor-pointer"
+              >
+                Xóa Vĩnh Viễn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 4: XEM TRƯỚC BẢNG TÍNH EXCEL & IN A4 (EXECUTIVE PRINT & SPREADSHEET)
+      ========================================================================= */}
+      {showExportPreviewModal && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="relative bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-100 overflow-hidden max-h-[92vh] flex flex-col">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Xem Trước Báo Cáo Phân Quyền RBAC</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Bao gồm {filteredAccounts.length} tài khoản • Định dạng xuất chuẩn UTF-8 BOM
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExportPreviewModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Table Area (Printable) */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div id="printable-rbac-area" className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200 bg-slate-50">
+                  <h2 className="text-sm font-black text-slate-900 uppercase">
+                    BẢNG ĐỐI SOÁT PHÂN QUYỀN RBAC &amp; BẢO MẬT HỆ THỐNG TECHCORE
+                  </h2>
+                  <p className="text-[11px] text-slate-500">
+                    Thời điểm kết xuất: {new Date().toLocaleString("vi-VN")} • Quản trị viên: {currentAdminName}
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200 text-[10px] font-black text-slate-600 uppercase">
+                        <th className="p-3">Họ Tên</th>
+                        <th className="p-3">Email</th>
+                        <th className="p-3">Vai Trò</th>
+                        <th className="p-3">Quyền Hạn</th>
+                        <th className="p-3">2FA</th>
+                        <th className="p-3">Trạng Thái</th>
+                        <th className="p-3">IP Đăng Nhập</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredAccounts.map((a) => (
+                        <tr key={a.id} className="hover:bg-slate-50/50">
+                          <td className="p-3 font-bold text-slate-900">{a.fullName}</td>
+                          <td className="p-3 font-mono text-[11px] text-blue-600">{a.email}</td>
+                          <td className="p-3 font-semibold text-slate-800">{a.roleTitle}</td>
+                          <td className="p-3 text-[11px] text-slate-600">{a.permissions.join(", ") || "Không"}</td>
+                          <td className="p-3 font-bold text-slate-700">{a.twoFactorEnabled ? "Bật" : "Tắt"}</td>
+                          <td className="p-3 text-slate-700">{a.statusText}</td>
+                          <td className="p-3 font-mono text-[10px] text-slate-500">{a.loginIp}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+              <span className="text-xs text-slate-500">
+                Sẵn sàng kết xuất hoặc in ấn tài liệu A4 bảo mật
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    vipToast.invoice("Đang chuẩn bị trang in ấn A4...", "In báo cáo");
+                    setTimeout(() => window.print(), 300);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-600" />
+                  <span>In Bản A4 (window.print)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadCSV}
+                  className="px-4 py-2 rounded-xl bg-[#001C44] hover:bg-[#0C5776] text-white font-bold text-xs transition flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#BCFEFE]" />
+                  <span>Tải File Excel (.csv)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
-

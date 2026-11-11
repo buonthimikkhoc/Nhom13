@@ -1331,6 +1331,189 @@ export function saveLocalVouchers(vouchers: AdminVoucher[]): void {
   } catch (e) {}
 }
 
+// =========================================================================
+// HỆ THỐNG PHÂN QUYỀN RBAC & QUẢN LÝ TÀI KHOẢN (ENTERPRISE RBAC & ACCOUNTS)
+// =========================================================================
+export interface RbacAccount {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  passwordDisplay: string;
+  role: "super_admin" | "order_admin" | "tech_admin" | "customer_test";
+  roleTitle: string;
+  duties: string;
+  permissions: string[]; // ["revenue", "orders", "products", "inventory", "warranty", "vouchers", "rbac", "settings"]
+  status: "active" | "suspended" | "locked";
+  statusText: string;
+  lastLogin: string;
+  loginIp: string;
+  twoFactorEnabled?: boolean;
+  auditLogs: { time: string; action: string; ip?: string }[];
+}
+
+export const DEFAULT_SEED_RBAC_ACCOUNTS: RbacAccount[] = [
+  {
+    id: "usr-admin-01",
+    fullName: "Nguyễn Quốc Anh",
+    email: "admin1@techcore.vn",
+    phone: "0988.112.445",
+    passwordDisplay: "Admin@123",
+    role: "super_admin",
+    roleTitle: "Super Admin (Tổng Quản Trị Hệ Thống)",
+    duties: "Toàn quyền kiểm soát tài chính, vận hành, bảo mật và phân quyền hệ sinh thái TechCore.",
+    permissions: ["revenue", "orders", "products", "inventory", "warranty", "vouchers", "rbac", "settings"],
+    status: "active",
+    statusText: "Đang trực tuyến (Active Session)",
+    lastLogin: "Hôm nay • 15:20:45",
+    loginIp: "118.69.182.10 (TP.HCM)",
+    twoFactorEnabled: true,
+    auditLogs: [
+      { time: "15:20", action: "Đăng nhập hệ sinh thái với xác thực TLS 1.3 & 2FA OTP", ip: "118.69.182.10" },
+      { time: "15:24", action: "Kiểm tra và phê duyệt Báo Cáo Doanh Thu Q1/2026", ip: "118.69.182.10" },
+      { time: "15:30", action: "Cấp hạn mức ngân sách chương trình Voucher B2B 10M", ip: "118.69.182.10" },
+    ],
+  },
+  {
+    id: "usr-admin-02",
+    fullName: "Trần Minh Tuấn",
+    email: "admin2@techcore.vn",
+    phone: "0903.882.119",
+    passwordDisplay: "Admin@456",
+    role: "order_admin",
+    roleTitle: "Quản Trị Đơn Hàng & Vận Hành Kho Lạnh",
+    duties: "Xử lý máy trạng thái đơn hàng (State Machine), điều phối đội xe CoolVan, đối soát tem niêm phong e-Shield.",
+    permissions: ["orders", "products", "inventory"],
+    status: "active",
+    statusText: "Đang trực tuyến (Active Session)",
+    lastLogin: "Hôm nay • 14:15:10",
+    loginIp: "14.161.40.88 (TP.HCM)",
+    twoFactorEnabled: true,
+    auditLogs: [
+      { time: "14:15", action: "Đăng nhập ca trực điều phối giao vận Hub Landmark 81", ip: "14.161.40.88" },
+      { time: "14:28", action: "Gán lệnh xuất kho cho xe CoolVan #01 đơn #TECH-2026-8888", ip: "14.161.40.88" },
+    ],
+  },
+  {
+    id: "usr-admin-03",
+    fullName: "Lê Hoàng Long",
+    email: "admin3@techcore.vn",
+    phone: "0912.774.331",
+    passwordDisplay: "Admin@789",
+    role: "tech_admin",
+    roleTitle: "Kỹ Sư Trưởng & Quản Trị Bảo Hành RMA",
+    duties: "Nghiệm thu phần cứng Workstation AI, quét định danh S/N vi mạch, điều phối kỹ sư sửa chữa On-site 24/7.",
+    permissions: ["products", "inventory", "warranty"],
+    status: "active",
+    statusText: "Đang trực tuyến (Active Session)",
+    lastLogin: "Hôm nay • 13:45:00",
+    loginIp: "123.30.50.22 (Hà Nội)",
+    twoFactorEnabled: true,
+    auditLogs: [
+      { time: "13:45", action: "Đăng nhập hệ thống Lab kiểm định phần cứng Keangnam", ip: "123.30.50.22" },
+      { time: "15:12", action: "Phê duyệt hồ sơ đổi mới 1-1 #RMA-2026-0812 (RTX 4090 OC)", ip: "123.30.50.22" },
+    ],
+  },
+  {
+    id: "usr-admin-00",
+    fullName: "Quản trị viên TechCore (Dự Phòng)",
+    email: "admin@techcore.vn",
+    phone: "1900.8888",
+    passwordDisplay: "Admin@123",
+    role: "super_admin",
+    roleTitle: "Super Admin (Tài Khoản Khẩn Cấp DR)",
+    duties: "Tài khoản dự phòng khôi phục thảm họa (Disaster Recovery) và ứng cứu sự cố hệ thống sàn.",
+    permissions: ["revenue", "orders", "products", "inventory", "warranty", "vouchers", "rbac", "settings"],
+    status: "active",
+    statusText: "Dự phòng sẵn sàng",
+    lastLogin: "20/02/2026 • 08:00:00",
+    loginIp: "10.0.0.1 (Data Center Cloudflare)",
+    twoFactorEnabled: true,
+    auditLogs: [
+      { time: "08:00", action: "Kiểm thử định kỳ tính sẵn sàng tài khoản khẩn cấp (DR Drill)", ip: "10.0.0.1" },
+    ],
+  },
+  {
+    id: "usr-test-01",
+    fullName: "Nguyễn Văn An",
+    email: "user1@gmail.com",
+    phone: "0987.654.321",
+    passwordDisplay: "User@123",
+    role: "customer_test",
+    roleTitle: "Khách Hàng Kiểm Thử VIP Platinum",
+    duties: "Tài khoản mẫu kiểm thử luồng mua sắm, áp mã voucher, thanh toán và bảo hành TechCare+.",
+    permissions: [],
+    status: "active",
+    statusText: "Tài khoản kiểm thử",
+    lastLogin: "Hôm nay • 16:02:18",
+    loginIp: "113.161.72.44 (TP.HCM)",
+    twoFactorEnabled: false,
+    auditLogs: [
+      { time: "16:02", action: "Đăng nhập tài khoản khách hàng trên website", ip: "113.161.72.44" },
+      { time: "16:05", action: "Áp mã Voucher TECHNEW100K và đặt mua đơn hàng mới", ip: "113.161.72.44" },
+    ],
+  },
+  {
+    id: "usr-test-02",
+    fullName: "Hoàng Mai Linh",
+    email: "user2@gmail.com",
+    phone: "0912.345.678",
+    passwordDisplay: "User@123",
+    role: "customer_test",
+    roleTitle: "Khách Hàng Doanh Nghiệp B2B Test",
+    duties: "Kiểm thử hợp đồng mua sắm số lượng lớn và hóa đơn điện tử VAT.",
+    permissions: [],
+    status: "active",
+    statusText: "Tài khoản kiểm thử",
+    lastLogin: "Hôm qua • 11:30:15",
+    loginIp: "27.72.88.90 (Hà Nội)",
+    twoFactorEnabled: false,
+    auditLogs: [
+      { time: "11:30", action: "Đăng nhập tài khoản doanh nghiệp B2B", ip: "27.72.88.90" },
+    ],
+  },
+  {
+    id: "usr-test-03",
+    fullName: "Khách Hàng Mẫu",
+    email: "customer@gmail.com",
+    phone: "0909.123.456",
+    passwordDisplay: "123456",
+    role: "customer_test",
+    roleTitle: "Khách Hàng Khảo Sát Tính Năng",
+    duties: "Kiểm thử giao diện Mobile Responsive và tra cứu tiến độ vận chuyển xe lạnh CoolVan.",
+    permissions: [],
+    status: "active",
+    statusText: "Tài khoản kiểm thử",
+    lastLogin: "25/02/2026 • 09:12:00",
+    loginIp: "42.115.34.80 (Đà Nẵng)",
+    twoFactorEnabled: false,
+    auditLogs: [
+      { time: "09:12", action: "Đăng nhập kiểm thử giao diện điện thoại", ip: "42.115.34.80" },
+    ],
+  },
+];
+
+export function getLocalRbacAccounts(): RbacAccount[] {
+  if (typeof window === "undefined") return DEFAULT_SEED_RBAC_ACCOUNTS;
+  try {
+    const raw = localStorage.getItem("tech_rbac_accounts");
+    if (!raw) {
+      localStorage.setItem("tech_rbac_accounts", JSON.stringify(DEFAULT_SEED_RBAC_ACCOUNTS));
+      return DEFAULT_SEED_RBAC_ACCOUNTS;
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  } catch (e) {}
+  return DEFAULT_SEED_RBAC_ACCOUNTS;
+}
+
+export function saveLocalRbacAccounts(accounts: RbacAccount[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("tech_rbac_accounts", JSON.stringify(accounts));
+  } catch (e) {}
+}
+
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const sessionId =
@@ -3019,6 +3202,103 @@ export const api = {
       finalAmount,
       message: `Áp dụng thành công mã ${voucher.code}! Giảm ngay ${fmt(discount)} cho đơn hàng.`,
     };
+  },
+
+  // =========================================================================
+  // RBAC & PHÂN QUYỀN TÀI KHOẢN (ROLE-BASED ACCESS CONTROL)
+  // =========================================================================
+  getAdminRbacAccounts: async () => {
+    const list = getLocalRbacAccounts();
+    return { success: true, data: list };
+  },
+
+  createAdminRbacAccount: async (accountData: Partial<RbacAccount>) => {
+    const list = getLocalRbacAccounts();
+    const id = "usr-admin-" + Date.now();
+    const role = accountData.role || "order_admin";
+    const roleTitleMap: Record<string, string> = {
+      super_admin: "Super Admin (Tổng Quản Trị)",
+      order_admin: "Quản Trị Đơn Hàng & Kho Vận",
+      tech_admin: "Kỹ Sư Trưởng & Quản Trị RMA",
+      customer_test: "Tài Khoản Kiểm Thử Hệ Thống",
+    };
+    const defaultPerms: Record<string, string[]> = {
+      super_admin: ["revenue", "orders", "products", "inventory", "warranty", "vouchers", "rbac", "settings"],
+      order_admin: ["orders", "products", "inventory"],
+      tech_admin: ["products", "inventory", "warranty"],
+      customer_test: [],
+    };
+
+    const newAccount: RbacAccount = {
+      id,
+      fullName: (accountData.fullName || "Quản trị viên mới").trim(),
+      email: (accountData.email || `admin_${Date.now()}@techcore.vn`).trim().toLowerCase(),
+      phone: accountData.phone || "0988.000.111",
+      passwordDisplay: accountData.passwordDisplay || "TechCore@2026",
+      role,
+      roleTitle: accountData.roleTitle || roleTitleMap[role] || "Quản trị viên",
+      duties: accountData.duties || "Quản trị vận hành hệ thống TechCore Enterprise.",
+      permissions: accountData.permissions || defaultPerms[role] || ["orders"],
+      status: accountData.status || "active",
+      statusText: "Đang trực tuyến (Active Session)",
+      lastLogin: "Vừa khởi tạo",
+      loginIp: "118.69.182.10 (TP.HCM)",
+      twoFactorEnabled: accountData.twoFactorEnabled ?? true,
+      auditLogs: [
+        {
+          time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+          action: "Khởi tạo tài khoản và phân quyền chức vụ",
+          ip: "118.69.182.10",
+        },
+      ],
+    };
+
+    list.unshift(newAccount);
+    saveLocalRbacAccounts(list);
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("techcore:rbac-changed", { detail: { newAccount } }));
+      } catch (e) {}
+    }
+
+    return { success: true, data: newAccount };
+  },
+
+  updateAdminRbacAccount: async (id: string, patch: Partial<RbacAccount>) => {
+    const list = getLocalRbacAccounts();
+    const idx = list.findIndex((a) => a.id === id || a.email.toLowerCase() === id.toLowerCase());
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...patch };
+      saveLocalRbacAccounts(list);
+
+      if (typeof window !== "undefined") {
+        try {
+          window.dispatchEvent(new CustomEvent("techcore:rbac-changed", { detail: { updated: list[idx] } }));
+        } catch (e) {}
+      }
+
+      return { success: true, data: list[idx] };
+    }
+    return { success: false, error: { message: "Không tìm thấy tài khoản để cập nhật" } };
+  },
+
+  deleteAdminRbacAccount: async (id: string) => {
+    const list = getLocalRbacAccounts();
+    const target = list.find((a) => a.id === id || a.email.toLowerCase() === id.toLowerCase());
+    if (target?.email === "admin1@techcore.vn") {
+      return { success: false, error: { message: "Không thể xóa tài khoản Super Admin Root tối cao (admin1@techcore.vn)!" } };
+    }
+    const updated = list.filter((a) => a.id !== id && a.email.toLowerCase() !== id.toLowerCase());
+    saveLocalRbacAccounts(updated);
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("techcore:rbac-changed", { detail: { deletedId: id } }));
+      } catch (e) {}
+    }
+
+    return { success: true };
   },
 
   updateOrderStatus: async (id: string, status: string, note?: string) => {

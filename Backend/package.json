@@ -1,6 +1,7 @@
 {
-  "name": "tech-ecommerce-api",
+  "name": "backend",
   "version": "1.0.0",
+  "description": "Backend - Máy Chủ API & Cơ Sở Dữ Liệu E-commerce Core (Node.js, Express, Prisma ORM, Port 5000)",
   "private": true,
   "main": "dist/index.js",
   "scripts": {

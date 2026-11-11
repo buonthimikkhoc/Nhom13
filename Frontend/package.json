@@ -1,6 +1,7 @@
 {
-  "name": "tech-ecommerce-web",
+  "name": "frontend",
   "version": "1.0.0",
+  "description": "Frontend - Website Bán Thiết Bị Công Nghệ E-commerce Core (Next.js 14, App Router, Tailwind CSS, Port 3030)",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3030",

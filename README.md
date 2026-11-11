@@ -6,40 +6,46 @@ Dự án website thương mại điện tử chuyên thiết bị công nghệ c
 
 ## 🚀 Công Nghệ Sử Dụng
 
-- **Frontend (`apps/web`)**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + Lucide Icons (Port 3030).
-- **Backend API (`apps/api`)**: Node.js + Express + TypeScript + Prisma ORM + JWT Auth + RBAC.
+- **Frontend (`Frontend`)**: Next.js 14 (App Router) + TypeScript + Tailwind CSS + Lucide Icons (Port 3030).
+- **Backend (`Backend`)**: Node.js + Express + TypeScript + Prisma ORM + JWT Auth + RBAC (Port 5000).
 - **Cơ sở dữ liệu**: SQLite (sẵn sàng chuyển đổi 1 dòng sang PostgreSQL khi triển khai Production).
-- **Kiến trúc**: Monorepo Workspaces chuẩn công nghiệp.
+- **Kiến trúc**: Phân chia rõ ràng 2 phân hệ độc lập **Frontend** & **Backend** (Monorepo Workspaces chuẩn công nghiệp).
 
 ---
 
 ## 📁 Cấu Trúc Dự Án
 
 ```
-├── apps/
-│   ├── api/                       # Backend REST API (Port 5000)
-│   │   ├── prisma/
-│   │   │   ├── schema.prisma      # Mô hình CSDL chuẩn E-commerce
-│   │   │   └── seed.ts            # Dữ liệu mẫu công nghệ thực tế
-│   │   └── src/
-│   │       ├── modules/           # Auth, Products, Cart, Orders, Warranty, Admin
-│   │       ├── middlewares/       # JWT Auth & Phân quyền RBAC
-│   │       └── index.ts           # Máy chủ Express & định tuyến /api/v1
-│   │
-│   └── web/                       # Giao diện Khách hàng & Admin (Port 3030)
-│       └── src/
-│           ├── app/
-│           │   ├── page.tsx               # Trang chủ (Banner, Flash Sale, Sản phẩm nổi bật)
-│           │   ├── danh-muc/[slug]/       # Danh sách sản phẩm & bộ lọc giá/hãng
-│           │   ├── san-pham/[slug]/       # Chi tiết máy, chọn cấu hình, thông số kỹ thuật
-│           │   ├── gio-hang/              # Giỏ hàng & áp dụng voucher khuyến mãi
-│           │   ├── thanh-toan/            # Đặt hàng (COD / VNPay QR)
-│           │   ├── tra-cuu-bao-hanh/      # Tra cứu bảo hành điện tử theo Serial/IMEI
-│           │   └── admin/                 # Admin Dashboard & State Machine đơn hàng
-│           ├── components/        # Navbar, Footer, ProductCard
-│           └── context/           # CartContext đồng bộ giỏ hàng
+├── Frontend/                      # Phân hệ Giao diện Khách hàng & Quản trị Admin (Port 3030)
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── page.tsx               # Trang chủ (Banner, Flash Sale, Sản phẩm nổi bật)
+│   │   │   ├── danh-muc/[slug]/       # Danh sách sản phẩm & bộ lọc giá/hãng
+│   │   │   ├── san-pham/[slug]/       # Chi tiết máy, chọn cấu hình, thông số kỹ thuật
+│   │   │   ├── gio-hang/              # Giỏ hàng & áp dụng voucher khuyến mãi
+│   │   │   ├── thanh-toan/            # Đặt hàng (COD / VNPay QR)
+│   │   │   ├── tra-cuu-bao-hanh/      # Tra cứu bảo hành điện tử theo Serial/IMEI
+│   │   │   └── admin/                 # 10 Module Quản trị Admin (Sản phẩm, Kho, Đơn hàng, Voucher, RBAC, Cài đặt...)
+│   │   ├── components/            # Navbar, Footer, ProductCard, AdminSidebar, Admin Modals
+│   │   ├── context/               # CartContext đồng bộ giỏ hàng
+│   │   ├── lib/                   # api.ts (Trung tâm API & đồng bộ dữ liệu thời gian thực)
+│   │   └── types/                 # TypeScript interfaces chuẩn E-commerce
+│   ├── package.json               # Package config Frontend
+│   └── tsconfig.json              # TypeScript config Frontend
 │
-├── package.json                   # Root monorepo script
+├── Backend/                       # Phân hệ Máy chủ REST API & Cơ sở dữ liệu (Port 5000)
+│   ├── prisma/
+│   │   ├── schema.prisma          # Mô hình CSDL chuẩn E-commerce
+│   │   └── seed.ts                # Dữ liệu công nghệ thực tế & tài khoản mẫu
+│   ├── src/
+│   │   ├── modules/               # Auth, Products, Cart, Orders, Warranty, Admin
+│   │   ├── middlewares/           # JWT Auth & Phân quyền RBAC
+│   │   ├── index.ts               # Máy chủ Express & định tuyến /api/v1
+│   │   └── prisma.ts              # Prisma Client instance
+│   ├── package.json               # Package config Backend
+│   └── tsconfig.json              # TypeScript config Backend
+│
+├── package.json                   # Root workspace (scripts chạy đồng thời hoặc riêng biệt)
 └── SPEC_website_ban_thiet_bi_cong_nghe.md
 ```
 
@@ -54,7 +60,7 @@ npm install
 
 ### 2. Thiết lập CSDL & Khởi tạo dữ liệu mẫu (Seed Data)
 ```bash
-npm --workspace=apps/api run db:setup
+npm --workspace=Backend run db:setup
 ```
 
 ### 3. Khởi chạy đồng thời cả Backend API và Frontend Web
@@ -63,8 +69,8 @@ npm run dev
 ```
 
 Hoặc chạy từng phân hệ riêng biệt:
-- **Backend API**: `npm run dev:api` (chạy tại `http://localhost:5000`)
-- **Frontend Web**: `npm run dev:web` (chạy tại `http://localhost:3030`)
+- **Backend API**: `npm run dev:backend` (chạy tại `http://localhost:5000`)
+- **Frontend Web**: `npm run dev:frontend` (chạy tại `http://localhost:3030`)
 
 ---
 

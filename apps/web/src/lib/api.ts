@@ -1514,6 +1514,159 @@ export function saveLocalRbacAccounts(accounts: RbacAccount[]): void {
   } catch (e) {}
 }
 
+// =========================================================================
+// HỆ THỐNG CẤU HÌNH & HẠ TẦNG KỸ THUẬT (ENTERPRISE SYSTEM SETTINGS & APIS)
+// =========================================================================
+export interface ApiKeyItem {
+  id: string;
+  name: string;
+  client: string;
+  keyMasked: string;
+  scope: string;
+  environment: string;
+  createdDate: string;
+  lastUsed: string;
+  rateLimit: string;
+  status: "active" | "revoked";
+  statusText: string;
+}
+
+export interface SystemSettings {
+  payment: {
+    vcbClientId: string;
+    vcbSecretKey: string;
+    vcbAutoReconcile: boolean;
+    vnpayTmnCode: string;
+    vnpayHashSecret: string;
+    techPayQrEnabled: boolean;
+  };
+  coolvan: {
+    iotEndpoint: string;
+    telemetryPingSec: number;
+    targetTemp: string;
+    autoDispatchCoolVan: boolean;
+    tempWarningThreshold: string;
+  };
+  eshield: {
+    ledgerNodeUrl: string;
+    ledgerChainId: string;
+    autoMintOnImport: boolean;
+    contractAddress: string;
+  };
+  notifications: {
+    smsBrandname: string;
+    smsOtpTimeout: number;
+    telegramAlertWebhook: string;
+    emailAlertsEnabled: boolean;
+  };
+  apiKeys: ApiKeyItem[];
+}
+
+export const DEFAULT_SEED_SETTINGS: SystemSettings = {
+  payment: {
+    vcbClientId: "VCB_CORP_TECHCORE_9921448",
+    vcbSecretKey: "sk_live_9f823a7b91c20e4d88e01",
+    vcbAutoReconcile: true,
+    vnpayTmnCode: "TECHCORE_VNPAY_PROD",
+    vnpayHashSecret: "VNPAYSECRETKEY99812A4001B",
+    techPayQrEnabled: true,
+  },
+  coolvan: {
+    iotEndpoint: "mqtts://iot.coolvan.techcore.vn:8883",
+    telemetryPingSec: 5,
+    targetTemp: "18.5",
+    autoDispatchCoolVan: true,
+    tempWarningThreshold: "23.0",
+  },
+  eshield: {
+    ledgerNodeUrl: "https://node-01.ledger.techcore.vn:8545",
+    ledgerChainId: "1337 (TechCore Private EVM)",
+    autoMintOnImport: true,
+    contractAddress: "0x71c998a4d10f823a1099bc018a88192a0142b781",
+  },
+  notifications: {
+    smsBrandname: "TECHCORE",
+    smsOtpTimeout: 60,
+    telegramAlertWebhook: "https://api.telegram.org/bot71289128:AAH.../sendMessage",
+    emailAlertsEnabled: true,
+  },
+  apiKeys: [
+    {
+      id: "key-01",
+      name: "CoolVan IoT Fleet Telemetry Agent",
+      client: "CoolVan Onboard Microcontroller v2",
+      keyMasked: "tc_live_coolvan_99182a4d8120e7",
+      scope: "iot:write_telemetry, gps:stream",
+      environment: "production",
+      createdDate: "01/01/2026",
+      lastUsed: "12 giây trước",
+      rateLimit: "1.200 req/min",
+      status: "active",
+      statusText: "Đang hoạt động",
+    },
+    {
+      id: "key-02",
+      name: "Vietcombank Enterprise Webhook Reconcile",
+      client: "Vietcombank Core Banking Gateway",
+      keyMasked: "tc_live_vcb_reconcile_448192a01b",
+      scope: "payments:webhook_receive, ledger:verify",
+      environment: "production",
+      createdDate: "10/01/2026",
+      lastUsed: "4 phút trước",
+      rateLimit: "500 req/min",
+      status: "active",
+      statusText: "Đang hoạt động",
+    },
+    {
+      id: "key-03",
+      name: "ASUS ROG Enterprise PO Dispatch Sync",
+      client: "ASUS Global Supply Chain B2B",
+      keyMasked: "tc_live_asus_po_881920b72c91",
+      scope: "po:create, inventory:sync",
+      environment: "production",
+      createdDate: "15/01/2026",
+      lastUsed: "25 phút trước",
+      rateLimit: "300 req/min",
+      status: "active",
+      statusText: "Đang hoạt động",
+    },
+    {
+      id: "key-04",
+      name: "Mobile App Kỹ Thuật Viên TechCare+",
+      client: "KTV On-Site Field Service App",
+      keyMasked: "tc_live_ktv_field_7718921a990",
+      scope: "rma:update, eshield:scan_qr",
+      environment: "production",
+      createdDate: "01/02/2026",
+      lastUsed: "1 phút trước",
+      rateLimit: "600 req/min",
+      status: "active",
+      statusText: "Đang hoạt động",
+    },
+  ],
+};
+
+export function getLocalSettings(): SystemSettings {
+  if (typeof window === "undefined") return DEFAULT_SEED_SETTINGS;
+  try {
+    const raw = localStorage.getItem("tech_system_settings");
+    if (!raw) {
+      localStorage.setItem("tech_system_settings", JSON.stringify(DEFAULT_SEED_SETTINGS));
+      return DEFAULT_SEED_SETTINGS;
+    }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") return { ...DEFAULT_SEED_SETTINGS, ...parsed };
+  } catch (e) {}
+  return DEFAULT_SEED_SETTINGS;
+}
+
+export function saveLocalSettings(settings: SystemSettings): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("tech_system_settings", JSON.stringify(settings));
+  } catch (e) {}
+}
+
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const sessionId =
@@ -3295,6 +3448,81 @@ export const api = {
     if (typeof window !== "undefined") {
       try {
         window.dispatchEvent(new CustomEvent("techcore:rbac-changed", { detail: { deletedId: id } }));
+      } catch (e) {}
+    }
+
+    return { success: true };
+  },
+
+  // =========================================================================
+  // CẤU HÌNH HỆ THỐNG & API KEYS (SYSTEM SETTINGS & INTEGRATIONS)
+  // =========================================================================
+  getAdminSettings: async () => {
+    const s = getLocalSettings();
+    return { success: true, data: s };
+  },
+
+  saveAdminSettings: async (patch: Partial<SystemSettings>) => {
+    const current = getLocalSettings();
+    const updated: SystemSettings = {
+      ...current,
+      ...patch,
+      payment: { ...current.payment, ...(patch.payment || {}) },
+      coolvan: { ...current.coolvan, ...(patch.coolvan || {}) },
+      eshield: { ...current.eshield, ...(patch.eshield || {}) },
+      notifications: { ...current.notifications, ...(patch.notifications || {}) },
+      apiKeys: patch.apiKeys || current.apiKeys,
+    };
+    saveLocalSettings(updated);
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("techcore:settings-changed", { detail: { settings: updated } }));
+      } catch (e) {}
+    }
+
+    return { success: true, data: updated };
+  },
+
+  createAdminApiKey: async (keyData: { name: string; client: string; scope: string; environment?: string; rateLimit?: string }) => {
+    const current = getLocalSettings();
+    const randomHex = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+    const newKey: ApiKeyItem = {
+      id: "key-" + Date.now(),
+      name: keyData.name.trim(),
+      client: keyData.client.trim(),
+      keyMasked: `tc_${keyData.environment === "production" ? "live" : "test"}_${randomHex}`,
+      scope: keyData.scope.trim(),
+      environment: keyData.environment || "production",
+      createdDate: new Date().toLocaleDateString("vi-VN"),
+      lastUsed: "Vừa khởi tạo",
+      rateLimit: keyData.rateLimit || "600 req/min",
+      status: "active",
+      statusText: "Đang hoạt động",
+    };
+
+    const updatedKeys = [newKey, ...current.apiKeys];
+    const updatedSettings = { ...current, apiKeys: updatedKeys };
+    saveLocalSettings(updatedSettings);
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("techcore:settings-changed", { detail: { settings: updatedSettings } }));
+      } catch (e) {}
+    }
+
+    return { success: true, data: newKey };
+  },
+
+  deleteAdminApiKey: async (id: string) => {
+    const current = getLocalSettings();
+    const updatedKeys = current.apiKeys.filter((k) => k.id !== id);
+    const updatedSettings = { ...current, apiKeys: updatedKeys };
+    saveLocalSettings(updatedSettings);
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("techcore:settings-changed", { detail: { settings: updatedSettings } }));
       } catch (e) {}
     }
 

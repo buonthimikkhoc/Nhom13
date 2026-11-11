@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { formatVND } from "../lib/utils";
+import { api } from "../lib/api";
 
 export default function HomePage() {
   const router = useRouter();
@@ -365,93 +366,267 @@ export default function HomePage() {
 
   const currentPackage = solutionPackages[activeSolutionTab];
 
-  // Danh mục sản phẩm không sale (MSRP niêm yết chính hãng)
-  const standardProducts = [
-    {
-      id: "std-1",
-      slug: "cpu-intel-core-i9-14900k",
-      variantId: "var-i9-14900k",
-      name: "Bộ Vi Xử Lý CPU Intel Core i9-14900K (Up to 6.0GHz)",
-      specs: "24 nhân 32 luồng • Xung nhịp 6.0GHz • Socket LGA1700",
-      price: 15490000,
-      image: "https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=600",
-      category: "hardware",
-      badge: "CHÍNH HÃNG 100%",
-      badgeColor: "bg-blue-600 text-white",
-      warranty: "36T TechCare+",
-      rating: 4.9,
-    },
-    {
-      id: "std-2",
-      slug: "apple-macbook-pro-14-m3-pro",
-      variantId: "var-3",
-      name: "Apple MacBook Pro 14 M3 Pro (18GB / 512GB SSD Space Black)",
-      specs: "Apple M3 Pro 11-Core • 18GB Unified Memory • Liquid Retina XDR",
-      price: 48990000,
-      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600",
-      category: "apple",
-      badge: "APPLE VN/A NGUYÊN BẢN",
-      badgeColor: "bg-slate-900 text-white",
-      warranty: "12T Apple Care+",
-      rating: 5.0,
-    },
-    {
-      id: "std-3",
-      slug: "chuot-logitech-g-pro-x-superlight-2",
-      variantId: "var-gpro-white",
-      name: "Chuột Gaming Không Dây Logitech G Pro X Superlight 2 (60g)",
-      specs: "Trọng lượng siêu nhẹ 60g • Cảm biến HERO 2 32.000 DPI • Polling 4000Hz",
-      price: 3690000,
-      image: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=600",
-      category: "gear",
-      badge: "ESPORTS TOURNAMENT",
-      badgeColor: "bg-emerald-600 text-white",
-      warranty: "24T Đổi Mới",
-      rating: 5.0,
-    },
-    {
-      id: "std-4",
-      slug: "ban-phim-co-gaming-khong-day-logitech-g915-lightspeed",
-      variantId: "var-8",
-      name: "Bàn Phím Cơ Không Dây Logitech G915 LIGHTSPEED Wireless RGB",
-      specs: "Switch GL Tactile Low-profile • Kết nối 1ms • Vỏ nhôm máy bay",
-      price: 4290000,
-      image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600",
-      category: "gear",
-      badge: "HI-END WIRELESS",
-      badgeColor: "bg-indigo-600 text-white",
-      warranty: "24T Chính Hãng",
-      rating: 4.8,
-    },
-    {
-      id: "std-5",
-      slug: "iphone-16-pro-max-256gb",
-      variantId: "var-5",
-      name: "iPhone 16 Pro Max 256GB Chính Hãng VN/A Titan Sa Mạc",
-      specs: "Chip Apple A18 Pro 3nm • Khung Titan cấp 5 • Camera 48MP Zoom 5x",
-      price: 33990000,
-      image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600",
-      category: "apple",
-      badge: "APPLE VN/A MỚI VỀ",
-      badgeColor: "bg-amber-700 text-white",
-      warranty: "12T TechCare+",
-      rating: 4.9,
-    },
-    {
-      id: "std-6",
-      slug: "vga-asus-rog-strix-geforce-rtx-4080-super-16gb",
-      variantId: "var-7",
-      name: "Card Màn Hình ASUS ROG Strix GeForce RTX 4080 SUPER 16GB OC",
-      specs: "16GB GDDR6X 256-bit • Ada Lovelace • Tản nhiệt buồng hơi Vapor Chamber",
-      price: 33490000,
-      image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600",
-      category: "hardware",
-      badge: "ROG FLAGSHIP GPU",
-      badgeColor: "bg-blue-700 text-white",
-      warranty: "36T TechCare+",
-      rating: 4.9,
-    },
-  ];
+  // Tải danh mục sản phẩm thời gian thực từ API & Lắng nghe đồng bộ khi Admin cập nhật
+  const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadCatalog() {
+      try {
+        const res = await api.getProducts();
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setCatalogProducts(res.data);
+        }
+      } catch (e) {}
+    }
+    loadCatalog();
+    window.addEventListener("techcore:products-changed", loadCatalog);
+    return () => window.removeEventListener("techcore:products-changed", loadCatalog);
+  }, []);
+
+  // Danh mục sản phẩm không sale lấy trực tiếp từ Catalog thời gian thực
+  const standardProducts = useMemo(() => {
+    if (!catalogProducts || catalogProducts.length === 0) {
+      return [
+        {
+          id: "std-1",
+          slug: "cpu-intel-core-i9-14900k",
+          variantId: "var-i9-14900k",
+          name: "Bộ Vi Xử Lý CPU Intel Core i9-14900K (Up to 6.0GHz)",
+          specs: "24 nhân 32 luồng • Xung nhịp 6.0GHz • Socket LGA1700",
+          price: 15490000,
+          image: "https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=600",
+          category: "hardware",
+          badge: "CHÍNH HÃNG 100%",
+          badgeColor: "bg-blue-600 text-white",
+          warranty: "36T TechCare+",
+          rating: 4.9,
+        },
+        {
+          id: "std-2",
+          slug: "apple-macbook-pro-14-m3-pro",
+          variantId: "var-3",
+          name: "Apple MacBook Pro 14 M3 Pro (18GB / 512GB SSD Space Black)",
+          specs: "Apple M3 Pro 11-Core • 18GB Unified Memory • Liquid Retina XDR",
+          price: 48990000,
+          image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600",
+          category: "apple",
+          badge: "APPLE VN/A NGUYÊN BẢN",
+          badgeColor: "bg-slate-900 text-white",
+          warranty: "12T Apple Care+",
+          rating: 5.0,
+        },
+        {
+          id: "std-3",
+          slug: "chuot-logitech-g-pro-x-superlight-2",
+          variantId: "var-gpro-white",
+          name: "Chuột Gaming Không Dây Logitech G Pro X Superlight 2 (60g)",
+          specs: "Trọng lượng siêu nhẹ 60g • Cảm biến HERO 2 32.000 DPI • Polling 4000Hz",
+          price: 3690000,
+          image: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=600",
+          category: "gear",
+          badge: "ESPORTS TOURNAMENT",
+          badgeColor: "bg-emerald-600 text-white",
+          warranty: "24T Đổi Mới",
+          rating: 5.0,
+        },
+        {
+          id: "std-4",
+          slug: "ban-phim-co-gaming-khong-day-logitech-g915-lightspeed",
+          variantId: "var-8",
+          name: "Bàn Phím Cơ Không Dây Logitech G915 LIGHTSPEED Wireless RGB",
+          specs: "Switch GL Tactile Low-profile • Kết nối 1ms • Vỏ nhôm máy bay",
+          price: 4290000,
+          image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600",
+          category: "gear",
+          badge: "HI-END WIRELESS",
+          badgeColor: "bg-indigo-600 text-white",
+          warranty: "24T Chính Hãng",
+          rating: 4.8,
+        },
+        {
+          id: "std-5",
+          slug: "iphone-16-pro-max-256gb",
+          variantId: "var-5",
+          name: "iPhone 16 Pro Max 256GB Chính Hãng VN/A Titan Sa Mạc",
+          specs: "Chip Apple A18 Pro 3nm • Khung Titan cấp 5 • Camera 48MP Zoom 5x",
+          price: 33990000,
+          image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600",
+          category: "apple",
+          badge: "APPLE VN/A MỚI VỀ",
+          badgeColor: "bg-amber-700 text-white",
+          warranty: "12T TechCare+",
+          rating: 4.9,
+        },
+        {
+          id: "std-6",
+          slug: "vga-asus-rog-strix-geforce-rtx-4080-super-16gb",
+          variantId: "var-7",
+          name: "Card Màn Hình ASUS ROG Strix GeForce RTX 4080 SUPER 16GB OC",
+          specs: "16GB GDDR6X 256-bit • Ada Lovelace • Tản nhiệt buồng hơi Vapor Chamber",
+          price: 33490000,
+          image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600",
+          category: "hardware",
+          badge: "ROG FLAGSHIP GPU",
+          badgeColor: "bg-blue-700 text-white",
+          warranty: "36T TechCare+",
+          rating: 4.9,
+        },
+      ];
+    }
+
+    return catalogProducts.map((p) => {
+      const catSlug = p.category?.slug || "";
+      let category: "hardware" | "apple" | "gear" = "hardware";
+      if (catSlug.includes("apple") || catSlug.includes("dien-thoai") || p.brand?.slug === "apple") {
+        category = "apple";
+      } else if (
+        catSlug.includes("gear") ||
+        catSlug.includes("phu-kien") ||
+        catSlug.includes("ban-phim") ||
+        catSlug.includes("chuot") ||
+        catSlug.includes("tai-nghe")
+      ) {
+        category = "gear";
+      }
+
+      let specsStr = p.shortDesc || "";
+      if (!specsStr && p.specs) {
+        try {
+          const parsed = typeof p.specs === "string" ? JSON.parse(p.specs) : p.specs;
+          specsStr = Object.values(parsed).slice(0, 3).join(" • ");
+        } catch (e) {}
+      }
+
+      const primaryVar = p.variants?.[0] || {};
+      const price = primaryVar.price || p.price || 15000000;
+      const variantId = primaryVar.id || `var-${p.slug}`;
+
+      return {
+        id: p.id,
+        slug: p.slug,
+        variantId,
+        name: p.name,
+        specs: specsStr || "Chính hãng 100% • Bảo hành TechCare+ toàn diện",
+        price,
+        image: p.images?.[0]?.url || p.image || "https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=600",
+        category,
+        badge:
+          category === "apple"
+            ? "APPLE VN/A NGUYÊN BẢN"
+            : category === "gear"
+            ? "ESPORTS TOURNAMENT"
+            : "CHÍNH HÃNG 100%",
+        badgeColor:
+          category === "apple"
+            ? "bg-slate-900 text-white"
+            : category === "gear"
+            ? "bg-emerald-600 text-white"
+            : "bg-blue-600 text-white",
+        warranty: category === "apple" ? "12T Apple Care+" : "36T TechCare+",
+        rating: 5.0,
+      };
+    });
+  }, [catalogProducts]);
+
+  // Dynamic Flash Deals từ Catalog sản phẩm thực tế
+  const flashDeals = useMemo(() => {
+    if (!catalogProducts || catalogProducts.length === 0) {
+      return [
+        {
+          id: "deal-1",
+          slug: "vga-msi-geforce-rtx-4090-suprim-x-24gb",
+          variantId: "var-4090",
+          title: "Card Màn Hình MSI GeForce RTX 4090 SUPRIM X 24GB",
+          subtitle: "24GB GDDR6X • Ray Tracing Gen 3",
+          price: 54990000,
+          comparePrice: 64990000,
+          discountBadge: "-15% OFF",
+          badgeColor: "bg-red-600",
+          image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=500",
+          progress: "w-4/5",
+          alertText: "Đang bán chạy",
+        },
+        {
+          id: "deal-2",
+          slug: "laptop-gaming-asus-rog-strix-g16-2024",
+          variantId: "var-1",
+          title: "Laptop Gaming ASUS ROG Strix G16 (2024) - Core i9",
+          subtitle: "Core i9-14900HX • 32GB RAM • RTX 4070",
+          price: 49900000,
+          comparePrice: 53990000,
+          discountBadge: "TẶNG BALO ROG 2.5TR",
+          badgeColor: "bg-blue-600",
+          image: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500",
+          progress: "w-3/5",
+          alertText: "Chỉ còn 3 sản phẩm",
+        },
+        {
+          id: "deal-3",
+          slug: "man-hinh-asus-rog-swift-oled-pg32ucdm",
+          variantId: "var-mon-oled",
+          title: "Màn Hình Gaming ASUS ROG Swift OLED PG32UCDM 32\"",
+          subtitle: "32 inch 4K QD-OLED • 240Hz • 0.03ms",
+          price: 34500000,
+          comparePrice: 42990000,
+          discountBadge: "-20% GIẢM SÂU",
+          badgeColor: "bg-red-600",
+          image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500",
+          progress: "w-5/6",
+          alertText: "Còn 5 suất giảm giá",
+        },
+        {
+          id: "deal-4",
+          slug: "ssd-samsung-990-pro-2tb-nvme",
+          variantId: "var-ssd-2tb",
+          title: "Ổ Cứng SSD Samsung 990 PRO 2TB PCIe Gen 4.0 NVMe M.2",
+          subtitle: "Đọc 7.450 MB/s • Ghi 6.900 MB/s • V-NAND TLC",
+          price: 4790000,
+          comparePrice: 5390000,
+          discountBadge: "CHÍNH HÃNG 100%",
+          badgeColor: "bg-emerald-600",
+          image: "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=500",
+          progress: "w-2/3",
+          alertText: "Đang bán chạy",
+        },
+      ];
+    }
+
+    const p1 = catalogProducts.find((p) => p.slug === "vga-msi-geforce-rtx-4090-suprim-x-24gb") || catalogProducts[0];
+    const p2 = catalogProducts.find((p) => p.slug === "laptop-gaming-asus-rog-strix-g16-2024") || catalogProducts[1] || p1;
+    const p3 = catalogProducts.find((p) => p.slug === "man-hinh-asus-rog-swift-oled-pg32ucdm") || catalogProducts[2] || p1;
+    const p4 = catalogProducts.find((p) => p.slug === "ssd-samsung-990-pro-2tb-nvme") || catalogProducts[3] || p1;
+
+    const mapDeal = (p: any, defaultBadge: string, badgeColor: string, subtitle: string, progress: string, alertText: string) => {
+      const v = p?.variants?.[0] || {};
+      const price = v.price || p?.price || 10000000;
+      const comparePrice = v.compareAtPrice || Math.round(price * 1.15);
+      const discountPercent = comparePrice > price ? Math.round(((comparePrice - price) / comparePrice) * 100) : 15;
+      const variantId = v.id || `var-${p?.slug || p?.id}`;
+      const image = p?.images?.[0]?.url || p?.image || "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=500";
+      
+      return {
+        id: p?.id,
+        slug: p?.slug || "",
+        variantId,
+        title: p?.name || p?.title || "",
+        subtitle,
+        price,
+        comparePrice,
+        discountBadge: defaultBadge || `-${discountPercent}% OFF`,
+        badgeColor,
+        image,
+        progress,
+        alertText,
+      };
+    };
+
+    return [
+      mapDeal(p1, "-15% OFF", "bg-red-600", "24GB GDDR6X • Ray Tracing Gen 3", "w-4/5", "Đang bán chạy"),
+      mapDeal(p2, "TẶNG BALO ROG 2.5TR", "bg-blue-600", "Core i9-14900HX • 32GB RAM • RTX 4070", "w-3/5", "Chỉ còn 3 sản phẩm"),
+      mapDeal(p3, "-20% GIẢM SÂU", "bg-red-600", "32 inch 4K QD-OLED • 240Hz • 0.03ms", "w-5/6", "Còn 5 suất giảm giá"),
+      mapDeal(p4, "CHÍNH HÃNG 100%", "bg-emerald-600", "Đọc 7.450 MB/s • Ghi 6.900 MB/s • V-NAND TLC", "w-2/3", "Đang bán chạy"),
+    ];
+  }, [catalogProducts]);
 
   return (
     <div className="w-full bg-slate-50 min-h-screen space-y-12 sm:space-y-16 pb-16">
@@ -871,264 +1046,78 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* 4 Flash Deal Product Cards */}
+          {/* 4 Flash Deal Product Cards (Dynamic từ Catalog sản phẩm) */}
           <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {/* Deal 1: RTX 4090 */}
-            <div className="p-4 rounded-2xl border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between relative group">
-              <span className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-md z-10">
-                -15% OFF
-              </span>
-              <div>
-                <Link
-                  href="/san-pham/vga-msi-geforce-rtx-4090-suprim-x-24gb"
-                  scroll={true}
-                  className="block w-full h-44 rounded-xl overflow-hidden bg-slate-50 mb-3 cursor-pointer group/item"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=500"
-                    alt="MSI RTX 4090 SUPRIM X 24GB"
-                    className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
-                  />
-                </Link>
-                <Link href="/san-pham/vga-msi-geforce-rtx-4090-suprim-x-24gb" scroll={true}>
-                  <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mb-1 hover:text-blue-600 transition">
-                    Card Màn Hình MSI GeForce RTX 4090 SUPRIM X 24GB
-                  </h4>
-                </Link>
-                <p className="text-[11px] text-slate-400 mb-2">24GB GDDR6X • Ray Tracing Gen 3</p>
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-base font-black text-blue-600">54.990.000₫</span>
-                  <span className="text-xs text-slate-400 line-through">64.990.000₫</span>
-                </div>
-                {/* Progress bar */}
-                <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1 overflow-hidden">
-                  <div className="bg-red-500 h-1.5 rounded-full w-4/5" />
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[10px] text-red-500 font-bold">Đang bán chạy</p>
+            {flashDeals.map((deal, idx) => (
+              <div
+                key={deal.variantId || idx}
+                className="p-4 rounded-2xl border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between relative group"
+              >
+                <span className={`absolute top-3 left-3 ${deal.badgeColor} text-white text-[10px] font-black px-2 py-1 rounded-md z-10`}>
+                  {deal.discountBadge}
+                </span>
+                <div>
                   <Link
-                    href="/san-pham/vga-msi-geforce-rtx-4090-suprim-x-24gb"
+                    href={`/san-pham/${deal.slug}`}
                     scroll={true}
-                    className="text-[10px] text-blue-600 hover:underline font-bold"
+                    className="block w-full h-44 rounded-xl overflow-hidden bg-slate-50 mb-3 cursor-pointer group/item"
                   >
-                    Chi tiết &rarr;
+                    <img
+                      src={deal.image}
+                      alt={deal.title}
+                      className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
+                    />
                   </Link>
+                  <Link href={`/san-pham/${deal.slug}`} scroll={true}>
+                    <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mb-1 hover:text-blue-600 transition">
+                      {deal.title}
+                    </h4>
+                  </Link>
+                  <p className="text-[11px] text-slate-400 mb-2">{deal.subtitle}</p>
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <span className="text-base font-black text-blue-600">{formatVND(deal.price)}</span>
+                    {deal.comparePrice > deal.price && (
+                      <span className="text-xs text-slate-400 line-through">{formatVND(deal.comparePrice)}</span>
+                    )}
+                  </div>
+                  {/* Progress bar */}
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1 overflow-hidden">
+                    <div className={`bg-blue-600 h-1.5 rounded-full ${deal.progress}`} />
+                  </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] text-red-500 font-bold">{deal.alertText}</p>
+                    <Link
+                      href={`/san-pham/${deal.slug}`}
+                      scroll={true}
+                      className="text-[10px] text-blue-600 hover:underline font-bold"
+                    >
+                      Chi tiết &rarr;
+                    </Link>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart("var-4090")}
-                  disabled={addingId === "var-4090"}
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
-                  title="Thêm vào giỏ hàng"
-                >
-                  <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="truncate">{addedId === "var-4090" ? "Đã thêm ✓" : "+ Giỏ hàng"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBuyNow("var-4090")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-xs shadow-blue-500/25 active:scale-95"
-                  title="Mua ngay"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-white" />
-                  <span>Mua Ngay</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Deal 2: ASUS ROG Strix G16 */}
-            <div className="p-4 rounded-2xl border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between relative group">
-              <span className="absolute top-3 left-3 bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-md z-10">
-                TẶNG BALO ROG 2.5TR
-              </span>
-              <div>
-                <Link
-                  href="/san-pham/laptop-gaming-asus-rog-strix-g16-2024"
-                  scroll={true}
-                  className="block w-full h-44 rounded-xl overflow-hidden bg-slate-50 mb-3 cursor-pointer group/item"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500"
-                    alt="Laptop Gaming ASUS ROG Strix G16 (2024)"
-                    className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
-                  />
-                </Link>
-                <Link href="/san-pham/laptop-gaming-asus-rog-strix-g16-2024" scroll={true}>
-                  <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mb-1 hover:text-blue-600 transition">
-                    Laptop Gaming ASUS ROG Strix G16 (2024) - Core i9
-                  </h4>
-                </Link>
-                <p className="text-[11px] text-slate-400 mb-2">Core i9-14900HX • 32GB RAM • RTX 4070</p>
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-base font-black text-blue-600">49.900.000₫</span>
-                  <span className="text-xs text-slate-400 line-through">53.990.000₫</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1 overflow-hidden">
-                  <div className="bg-amber-500 h-1.5 rounded-full w-3/5" />
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[10px] text-amber-600 font-bold">Chỉ còn 3 sản phẩm</p>
-                  <Link
-                    href="/san-pham/laptop-gaming-asus-rog-strix-g16-2024"
-                    scroll={true}
-                    className="text-[10px] text-blue-600 hover:underline font-bold"
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(deal.variantId)}
+                    disabled={addingId === deal.variantId}
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
+                    title="Thêm vào giỏ hàng"
                   >
-                    Chi tiết &rarr;
-                  </Link>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart("var-1")}
-                  disabled={addingId === "var-1"}
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
-                  title="Thêm vào giỏ hàng"
-                >
-                  <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="truncate">{addedId === "var-1" ? "Đã thêm ✓" : "+ Giỏ hàng"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBuyNow("var-1")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-xs shadow-blue-500/25 active:scale-95"
-                  title="Mua ngay"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-white" />
-                  <span>Mua Ngay</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Deal 3: ASUS ROG Swift OLED PG32UCDM */}
-            <div className="p-4 rounded-2xl border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between relative group">
-              <span className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-md z-10">
-                -20% GIẢM SÂU
-              </span>
-              <div>
-                <Link
-                  href="/san-pham/man-hinh-asus-rog-swift-oled-pg32ucdm"
-                  scroll={true}
-                  className="block w-full h-44 rounded-xl overflow-hidden bg-slate-50 mb-3 cursor-pointer group/item"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500"
-                    alt="Màn hình ASUS ROG Swift OLED PG32UCDM 32 inch"
-                    className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
-                  />
-                </Link>
-                <Link href="/san-pham/man-hinh-asus-rog-swift-oled-pg32ucdm" scroll={true}>
-                  <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mb-1 hover:text-blue-600 transition">
-                    Màn Hình Gaming ASUS ROG Swift OLED PG32UCDM 32&quot;
-                  </h4>
-                </Link>
-                <p className="text-[11px] text-slate-400 mb-2">32 inch 4K QD-OLED • 240Hz • 0.03ms</p>
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-base font-black text-blue-600">34.500.000₫</span>
-                  <span className="text-xs text-slate-400 line-through">42.990.000₫</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1 overflow-hidden">
-                  <div className="bg-red-500 h-1.5 rounded-full w-5/6" />
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[10px] text-red-500 font-bold">Còn 5 suất giảm giá</p>
-                  <Link
-                    href="/san-pham/man-hinh-asus-rog-swift-oled-pg32ucdm"
-                    scroll={true}
-                    className="text-[10px] text-blue-600 hover:underline font-bold"
+                    <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="truncate">{addedId === deal.variantId ? "Đã thêm ✓" : "+ Giỏ hàng"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleBuyNow(deal.variantId)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-xs shadow-blue-500/25 active:scale-95"
+                    title="Mua ngay"
                   >
-                    Chi tiết &rarr;
-                  </Link>
+                    <Zap className="w-3.5 h-3.5 fill-white" />
+                    <span>Mua Ngay</span>
+                  </button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart("var-mon-oled")}
-                  disabled={addingId === "var-mon-oled"}
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
-                  title="Thêm vào giỏ hàng"
-                >
-                  <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="truncate">{addedId === "var-mon-oled" ? "Đã thêm ✓" : "+ Giỏ hàng"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBuyNow("var-mon-oled")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-xs shadow-blue-500/25 active:scale-95"
-                  title="Mua ngay"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-white" />
-                  <span>Mua Ngay</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Deal 4: Nguồn Corsair / ROG Thor */}
-            <div className="p-4 rounded-2xl border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between relative group">
-              <span className="absolute top-3 left-3 bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-md z-10">
-                CHÍNH HÃNG 100%
-              </span>
-              <div>
-                <Link
-                  href="/san-pham/ssd-samsung-990-pro-2tb-nvme"
-                  scroll={true}
-                  className="block w-full h-44 rounded-xl overflow-hidden bg-slate-50 mb-3 cursor-pointer group/item"
-                >
-                  <img
-                    src="https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=500"
-                    alt="Nguồn Máy Tính Chuẩn PCIe 5.0"
-                    className="w-full h-full object-cover group-hover/item:scale-105 transition-transform duration-500"
-                  />
-                </Link>
-                <Link href="/san-pham/ssd-samsung-990-pro-2tb-nvme" scroll={true}>
-                  <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mb-1 hover:text-blue-600 transition">
-                    Ổ Cứng SSD Samsung 990 PRO 2TB PCIe Gen 4.0 NVMe M.2
-                  </h4>
-                </Link>
-                <p className="text-[11px] text-slate-400 mb-2">Đọc 7.450 MB/s • Ghi 6.900 MB/s • V-NAND TLC</p>
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-base font-black text-blue-600">4.790.000₫</span>
-                  <span className="text-xs text-slate-400 line-through">5.390.000₫</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1 overflow-hidden">
-                  <div className="bg-emerald-500 h-1.5 rounded-full w-2/3" />
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[10px] text-emerald-600 font-bold">Đang bán chạy</p>
-                  <Link
-                    href="/san-pham/ssd-samsung-990-pro-2tb-nvme"
-                    scroll={true}
-                    className="text-[10px] text-blue-600 hover:underline font-bold"
-                  >
-                    Chi tiết &rarr;
-                  </Link>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart("var-ssd-2tb")}
-                  disabled={addingId === "var-ssd-2tb"}
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
-                  title="Thêm vào giỏ hàng"
-                >
-                  <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="truncate">{addedId === "var-ssd-2tb" ? "Đã thêm ✓" : "+ Giỏ hàng"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBuyNow("var-ssd-2tb")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-xs shadow-blue-500/25 active:scale-95"
-                  title="Mua ngay"
-                >
-                  <Zap className="w-3.5 h-3.5 fill-white" />
-                  <span>Mua Ngay</span>
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

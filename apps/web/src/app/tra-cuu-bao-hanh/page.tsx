@@ -1,35 +1,84 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShieldCheck, Search, Calendar, Cpu, CheckCircle2, AlertCircle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import {
+  ShieldCheck,
+  Search,
+  Calendar,
+  Cpu,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  MapPin,
+  FileText,
+  User,
+  Package,
+} from "lucide-react";
 import { api } from "../../lib/api";
 
 export default function WarrantyLookupPage() {
-  const [serial, setSerial] = useState("ROG16-2024-001");
+  const searchParams = useSearchParams();
+  const querySerial = searchParams.get("serial") || searchParams.get("sn") || "";
+
+  const [serial, setSerial] = useState(querySerial);
   const [result, setResult] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recentSerials, setRecentSerials] = useState<{ serial: string; name: string }[]>([]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!serial.trim()) return;
+  // Tự động tải số Serial thực tế từ các đơn hàng đã đặt của người dùng
+  useEffect(() => {
+    async function loadUserSerials() {
+      try {
+        const res = await api.getMyOrders();
+        if (res.success && Array.isArray(res.data)) {
+          const serialsList: { serial: string; name: string }[] = [];
+          for (const ord of res.data) {
+            for (const item of ord.items || []) {
+              if (item.serialNumber) {
+                serialsList.push({
+                  serial: item.serialNumber,
+                  name: item.productName || "Thiết bị chính hãng",
+                });
+              }
+            }
+          }
+          setRecentSerials(serialsList.slice(0, 4));
+        }
+      } catch (e) {}
+    }
+    loadUserSerials();
+
+    if (querySerial) {
+      performLookup(querySerial);
+    }
+  }, [querySerial]);
+
+  const performLookup = async (lookupCode: string) => {
+    if (!lookupCode.trim()) return;
 
     try {
       setLoading(true);
       setError(null);
       setResult(null);
-      const res = await api.lookupWarranty(serial.trim());
-      if (res.success) {
+      const res = await api.lookupWarranty(lookupCode.trim());
+      if (res.success && res.data) {
         setResult(res.data);
       } else {
-        setError(res.error?.message || "Không tìm thấy thông tin bảo hành.");
+        setError(res.error?.message || "Không tìm thấy thông tin bảo hành cho mã này trên hệ thống.");
       }
     } catch (e: any) {
-      setError("Đã xảy ra lỗi khi kết nối máy chủ tra cứu.");
+      setError("Đã xảy ra lỗi khi kết nối máy chủ tra cứu bảo hành.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    performLookup(serial);
   };
 
   return (
@@ -40,10 +89,10 @@ export default function WarrantyLookupPage() {
           <ShieldCheck className="w-9 h-9" />
         </div>
         <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-          Tra Cứu Bảo Hành Điện Tử
+          Tra Cứu Bảo Hành Điện Tử &amp; e-Shield
         </h1>
         <p className="text-xs text-slate-500 mt-2">
-          Nhập số Serial (S/N) hoặc mã IMEI in trên tem sản phẩm hoặc hóa đơn mua hàng để kiểm tra thời hạn và trạng thái bảo hành chính hãng.
+          Nhập số Serial (S/N) hoặc mã định danh e-Shield trên hóa đơn mua hàng để kiểm tra thời hạn và trạng thái bảo hành chính hãng.
         </p>
       </div>
 
@@ -55,7 +104,7 @@ export default function WarrantyLookupPage() {
             <input
               type="text"
               required
-              placeholder="Nhập Serial hoặc IMEI (VD: ROG16-2024-001, IMEI-354892019283741...)"
+              placeholder="Nhập Serial Number hoặc mã e-Shield..."
               value={serial}
               onChange={(e) => setSerial(e.target.value)}
               className="w-full text-xs font-bold pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-blue-500 uppercase tracking-wider"
@@ -70,23 +119,34 @@ export default function WarrantyLookupPage() {
           </button>
         </form>
 
-        <div className="flex flex-wrap items-center gap-2 mt-4 text-[11px] text-slate-400">
-          <span>Gợi ý mã mẫu thử nghiệm:</span>
-          <button
-            type="button"
-            onClick={() => setSerial("ROG16-2024-001")}
-            className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded hover:underline"
-          >
-            ROG16-2024-001
-          </button>
-          <button
-            type="button"
-            onClick={() => setSerial("IMEI-354892019283741")}
-            className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded hover:underline"
-          >
-            IMEI-354892019283741
-          </button>
-        </div>
+        {/* Gợi ý Serial thực tế từ đơn hàng người dùng */}
+        {recentSerials.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 mt-4 text-[11px] text-slate-400">
+            <span>Thiết bị từ đơn hàng gần đây của bạn:</span>
+            {recentSerials.map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setSerial(item.serial);
+                  performLookup(item.serial);
+                }}
+                className="text-blue-600 font-bold bg-blue-50 px-2.5 py-1 rounded-xl hover:bg-blue-100 transition truncate max-w-[240px]"
+                title={item.name}
+              >
+                {item.serial}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-slate-400 mt-3">
+            💡 Bạn có thể tra cứu mã Serial (S/N) 12-16 ký tự in trên tem niêm phong e-Shield hoặc trong mục{" "}
+            <Link href="/don-hang" className="text-blue-600 font-bold hover:underline">
+              Lịch sử đơn hàng
+            </Link>
+            .
+          </p>
+        )}
       </div>
 
       {/* Result Display */}
@@ -95,18 +155,18 @@ export default function WarrantyLookupPage() {
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                Kết quả xác thực chính hãng
+                Kết quả xác thực chính hãng e-Shield
               </span>
               <h2 className="text-xl font-black mt-2">Mã Serial: {result.serialNumber}</h2>
             </div>
             <div className="flex items-center gap-2 bg-emerald-500 text-white text-xs font-black px-4 py-2 rounded-2xl self-start sm:self-auto shadow-md">
               <CheckCircle2 className="w-4 h-4" />
-              {result.isExpired ? "Hết hạn bảo hành" : "Đang được bảo hành"}
+              {result.isExpired ? "Hết hạn bảo hành" : "Đang được bảo hành chính hãng"}
             </div>
           </div>
 
           <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border">
+            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-200">
               <img
                 src={result.image || "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=400"}
                 alt={result.productName}
@@ -129,20 +189,36 @@ export default function WarrantyLookupPage() {
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <span className="text-slate-400 block mb-1">Ngày kích hoạt:</span>
                   <span className="font-extrabold text-slate-800">
-                    {result.warrantyStart ? new Date(result.warrantyStart).toLocaleDateString("vi-VN") : "Chưa kích hoạt (Trong kho)"}
+                    {result.warrantyStart ? new Date(result.warrantyStart).toLocaleDateString("vi-VN") : "Theo ngày xuất kho"}
                   </span>
                 </div>
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <span className="text-slate-400 block mb-1">Ngày hết hạn:</span>
                   <span className="font-extrabold text-slate-800">
-                    {result.warrantyEnd ? new Date(result.warrantyEnd).toLocaleDateString("vi-VN") : "Theo ngày xuất bán"}
+                    {result.warrantyEnd ? new Date(result.warrantyEnd).toLocaleDateString("vi-VN") : "36 tháng kể từ xuất bán"}
                   </span>
                 </div>
               </div>
 
+              {result.customerName && (
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-xs flex items-center justify-between">
+                  <div>
+                    <span className="text-slate-400 block text-[11px]">Chủ sở hữu / Đơn hàng:</span>
+                    <strong className="text-slate-900">{result.customerName}</strong>
+                    {result.orderCode && (
+                      <span className="text-blue-600 font-mono font-bold ml-2">({result.orderCode})</span>
+                    )}
+                  </div>
+                  {result.hubLocation && (
+                    <span className="text-[11px] text-slate-500 font-medium">{result.hubLocation}</span>
+                  )}
+                </div>
+              )}
+
               <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 text-xs text-slate-600 space-y-1">
-                <p className="font-bold text-blue-900">🛡️ Quyền lợi bảo hành TechCore:</p>
-                <p>• Hỗ trợ tiếp nhận bảo hành tại toàn bộ hơn 50 chi nhánh ủy quyền trên toàn quốc.</p>
+                <p className="font-bold text-blue-900">🛡️ Quyền lợi gói dịch vụ TechCare+:</p>
+                <p>• Bảo hành 1-đổi-1 trong 30 ngày đầu nếu phát sinh lỗi vi mạch phần cứng.</p>
+                <p>• Hỗ trợ tiếp nhận bảo hành tại các trạm dịch vụ TP.HCM, Hà Nội, Đà Nẵng.</p>
                 <p>• Miễn phí vệ sinh máy và tra keo tản nhiệt định kỳ trọn đời.</p>
               </div>
             </div>
@@ -160,4 +236,3 @@ export default function WarrantyLookupPage() {
     </div>
   );
 }
-

@@ -3,7 +3,7 @@ import { MOCK_PRODUCTS, MOCK_CATEGORIES, MOCK_BRANDS } from "./mockData";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 // Helper để lấy giỏ hàng từ localStorage
-function getLocalCart(): { id: string; items: any[]; total: number } {
+export function getLocalCart(): { id: string; items: any[]; total: number } {
   if (typeof window === "undefined") {
     return { id: "cart-local", items: [], total: 0 };
   }
@@ -14,7 +14,7 @@ function getLocalCart(): { id: string; items: any[]; total: number } {
   return { id: "cart-local", items: [], total: 0 };
 }
 
-function saveLocalCart(cart: any) {
+export function saveLocalCart(cart: any) {
   if (typeof window !== "undefined") {
     try {
       localStorage.setItem("tech_cart", JSON.stringify(cart));
@@ -23,7 +23,7 @@ function saveLocalCart(cart: any) {
 }
 
 // Helper để lấy danh sách đơn hàng đã đồng bộ từ localStorage
-function getLocalOrders(): any[] {
+export function getLocalOrders(): any[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem("tech_orders");
@@ -41,13 +41,85 @@ function getLocalOrders(): any[] {
   return DEFAULT_SEED_ORDERS;
 }
 
-function saveLocalOrders(orders: any[]) {
+export function saveLocalOrders(orders: any[]) {
   if (typeof window !== "undefined") {
     try {
       localStorage.setItem("tech_orders", JSON.stringify(orders));
       window.dispatchEvent(new CustomEvent("techcore:orders-changed", { detail: orders }));
     } catch (e) {}
   }
+}
+
+// Helper hợp nhất sản phẩm từ Mock Data + Custom Products từ Admin + Phản ánh Chỉnh sửa (tech_products_edits) - Bỏ sản phẩm đã xóa
+export function getAllMergedProducts(): any[] {
+  let customProducts: any[] = [];
+  let deletedIds: string[] = [];
+  let edits: Record<string, any> = {};
+
+  if (typeof window !== "undefined") {
+    try {
+      customProducts = JSON.parse(localStorage.getItem("custom_products") || "[]");
+    } catch (e) {}
+    try {
+      deletedIds = JSON.parse(localStorage.getItem("deleted_product_ids") || "[]");
+    } catch (e) {}
+    try {
+      edits = JSON.parse(localStorage.getItem("tech_products_edits") || "{}");
+    } catch (e) {}
+  }
+
+  const baseList = [...customProducts, ...MOCK_PRODUCTS];
+  const uniqueBySlug: any[] = [];
+  const seenSlugs = new Set<string>();
+
+  for (const p of baseList) {
+    if (!p || !p.slug || seenSlugs.has(p.slug)) continue;
+    seenSlugs.add(p.slug);
+
+    // Bỏ qua nếu sản phẩm đã bị xóa bởi admin
+    if (
+      deletedIds.includes(p.id) ||
+      deletedIds.includes(p.slug) ||
+      (p.sku && deletedIds.includes(p.sku))
+    ) {
+      continue;
+    }
+
+    // Áp dụng các thay đổi từ admin nếu có (giá, tên, kho, specs, badge, status)
+    const edit = edits[p.id] || edits[p.slug] || (p.sku ? edits[p.sku] : null);
+    if (edit) {
+      const basePrice = edit.price !== undefined ? edit.price : (p.variants?.[0]?.price ?? p.price ?? 15000000);
+      const baseStock = edit.stock !== undefined ? edit.stock : (p.variants?.[0]?.stock ?? p.stock ?? 20);
+      const mergedVariants = (p.variants && p.variants.length > 0)
+        ? p.variants.map((v: any) => ({
+            ...v,
+            price: edit.price !== undefined ? edit.price : v.price,
+            stock: edit.stock !== undefined ? edit.stock : v.stock,
+            status: edit.status || v.status,
+          }))
+        : [{
+            id: `var-${p.slug}`,
+            sku: edit.sku || p.sku || `SKU-${p.id}`,
+            name: edit.name || p.name,
+            price: basePrice,
+            stock: baseStock,
+          }];
+
+      uniqueBySlug.push({
+        ...p,
+        ...edit,
+        name: edit.name || p.name,
+        shortDesc: edit.shortDesc || p.shortDesc,
+        price: basePrice,
+        stock: baseStock,
+        variants: mergedVariants,
+      });
+    } else {
+      uniqueBySlug.push(p);
+    }
+  }
+
+  return uniqueBySlug;
 }
 
 // Khởi tạo đơn hàng mẫu mặc định nếu chưa có
@@ -442,7 +514,28 @@ const DEFAULT_SEED_CUSTOMERS = [
   },
 ];
 
-export const DEFAULT_SEED_ADMIN_PRODUCTS = [
+export function getLocalCustomers(): any[] {
+  if (typeof window === "undefined") return DEFAULT_SEED_CUSTOMERS;
+  try {
+    const raw = localStorage.getItem("tech_customers");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+    localStorage.setItem("tech_customers", JSON.stringify(DEFAULT_SEED_CUSTOMERS));
+  } catch (e) {}
+  return DEFAULT_SEED_CUSTOMERS;
+}
+
+export function saveLocalCustomers(list: any[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("tech_customers", JSON.stringify(list));
+    window.dispatchEvent(new CustomEvent("techcore:customers-changed", { detail: list }));
+  } catch (e) {}
+}
+
+export const DEFAULT_SEED_ADMIN_PRODUCTS: any[] = [
   {
     id: "prod-ws-990",
     name: "Workstation AI Dual RTX 4090 OC (Liquid Loop Pro)",
@@ -720,6 +813,8 @@ export const DEFAULT_SEED_ADMIN_PRODUCTS = [
     },
   },
 ];
+
+export const DEFAULT_TECH_PRODUCTS = DEFAULT_SEED_ADMIN_PRODUCTS;
 
 export const DEFAULT_SEED_INVENTORY = [
   {
@@ -1797,31 +1892,7 @@ export const api = {
 
   // Products
   getProducts: async (params?: Record<string, any>) => {
-    const query = new URLSearchParams(params).toString();
-    const res = await fetchApi(`/products?${query}`);
-
-    // Lấy thêm sản phẩm do admin tạo mới trong localStorage
-    let customProducts: any[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        customProducts = JSON.parse(localStorage.getItem("custom_products") || "[]");
-      } catch (e) {}
-    }
-
-    // Nếu Backend API trả về đầy đủ sản phẩm (từ 100 sản phẩm trở lên), ưu tiên dùng trực tiếp
-    if (res.success && Array.isArray(res.data) && res.data.length >= MOCK_PRODUCTS.length) {
-      return res;
-    }
-
-    // Kết hợp dữ liệu từ Backend API (nếu có dữ liệu mới), Custom Products và 100+ sản phẩm MOCK_PRODUCTS
-    const backendData = (res.success && Array.isArray(res.data)) ? res.data : [];
-    const backendSlugs = new Set(backendData.map((p: any) => p.slug));
-
-    let list = [
-      ...backendData,
-      ...customProducts.filter((p: any) => !backendSlugs.has(p.slug)),
-      ...MOCK_PRODUCTS.filter((p: any) => !backendSlugs.has(p.slug)),
-    ];
+    let list = getAllMergedProducts();
 
     // Hàm kiểm tra danh mục nghiêm ngặt: Tuyệt đối không lẫn lộn Laptop/Điện thoại với Linh kiện máy tính hay Phụ kiện
     const matchesCategory = (p: any, catSlug: string) => {
@@ -1874,15 +1945,15 @@ export const api = {
       );
     }
     if (params?.minPrice) {
-      list = list.filter((p) => p.variants[0]?.price >= Number(params.minPrice));
+      list = list.filter((p) => (p.variants?.[0]?.price ?? p.price ?? 0) >= Number(params.minPrice));
     }
     if (params?.maxPrice) {
-      list = list.filter((p) => p.variants[0]?.price <= Number(params.maxPrice));
+      list = list.filter((p) => (p.variants?.[0]?.price ?? p.price ?? 0) <= Number(params.maxPrice));
     }
     if (params?.sort === "price_asc") {
-      list.sort((a, b) => a.variants[0]?.price - b.variants[0]?.price);
+      list.sort((a, b) => (a.variants?.[0]?.price ?? a.price ?? 0) - (b.variants?.[0]?.price ?? b.price ?? 0));
     } else if (params?.sort === "price_desc") {
-      list.sort((a, b) => b.variants[0]?.price - a.variants[0]?.price);
+      list.sort((a, b) => (b.variants?.[0]?.price ?? b.price ?? 0) - (a.variants?.[0]?.price ?? a.price ?? 0));
     }
 
     return {
@@ -1896,25 +1967,24 @@ export const api = {
     const res = await fetchApi(`/products/${slug}`);
     if (res.success && res.data) return res;
 
-    let customProducts: any[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        customProducts = JSON.parse(localStorage.getItem("custom_products") || "[]");
-      } catch (e) {}
-    }
-    const all = [...customProducts, ...MOCK_PRODUCTS];
-    const found = all.find((p) => p.slug === slug);
+    const all = getAllMergedProducts();
+    const found = all.find((p) => p.slug === slug || p.id === slug);
 
     if (found) {
       return {
         success: true,
         data: {
           ...found,
-          relatedProducts: all.filter((p) => p.id !== found.id).slice(0, 4),
+          relatedProducts: all.filter((p) => p.id !== found.id && p.category?.slug === found.category?.slug).slice(0, 4),
         },
       };
     }
     return { success: false, error: { message: "Không tìm thấy sản phẩm" } };
+  },
+
+  getFeaturedProducts: async () => {
+    const all = getAllMergedProducts();
+    return { success: true, data: all.slice(0, 8) };
   },
 
   searchSuggest: async (q: string) => {
@@ -2056,6 +2126,40 @@ export const api = {
         const list = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
         list.push(userData);
         localStorage.setItem("registeredUsers", JSON.stringify(list));
+
+        // Đồng bộ ngay lập tức vào danh bạ khách hàng TechCore Admin
+        const customers = getLocalCustomers();
+        const existing = customers.find(
+          (c) =>
+            c.email?.toLowerCase() === userData.email?.toLowerCase() ||
+            (userData.phone && c.phone === userData.phone)
+        );
+        if (!existing) {
+          const newCust = {
+            id: "cust-" + Date.now(),
+            code: "KH-MEM-" + Math.floor(100 + Math.random() * 900),
+            name: userData.fullName || "Khách Hàng Mới",
+            representative: userData.fullName || "Khách Hàng Mới",
+            type: "personal",
+            email: userData.email,
+            phone: userData.phone || "Chưa cập nhật",
+            address: "Việt Nam",
+            hub: "Hub Trung Tâm TP.HCM",
+            vipTier: "Thành viên Bạc",
+            vipTierCode: "silver",
+            techPoints: 100,
+            ltvAmount: 0,
+            ordersCount: 0,
+            status: "active",
+            statusText: "Hoạt động",
+            joinedDate: new Date().toLocaleDateString("vi-VN"),
+            primaryHardware: "Tài khoản đăng ký trực tuyến",
+            assignedEngineer: "KTV Trực Tuyến TechCare",
+            note: "Đăng ký thành viên mới qua hệ thống Storefront",
+          };
+          customers.unshift(newCust);
+          saveLocalCustomers(customers);
+        }
       } catch (e) {}
     }
     return { success: true, data: { user: userData } };
@@ -2081,60 +2185,73 @@ export const api = {
     }
 
     // Đồng bộ offline mượt mà không bao giờ báo lỗi máy chủ
-    let customProducts: any[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        customProducts = JSON.parse(localStorage.getItem("custom_products") || "[]");
-      } catch (e) {}
-    }
-    const allProducts = [...customProducts, ...MOCK_PRODUCTS];
+    const allProducts = getAllMergedProducts();
 
     let foundProduct: any = null;
     let foundVariant: any = null;
 
     for (const p of allProducts) {
-      const v = p.variants?.find((item: any) => item.id === variantId);
+      const v = p.variants?.find((item: any) => item.id === variantId || item.sku === variantId);
       if (v) {
         foundProduct = p;
         foundVariant = v;
+        break;
+      }
+      if (p.slug === variantId || p.id === variantId) {
+        foundProduct = p;
+        foundVariant = p.variants?.[0];
         break;
       }
     }
 
     if (!foundVariant && allProducts[0]) {
       foundProduct = allProducts[0];
-      foundVariant = allProducts[0].variants[0];
+      foundVariant = allProducts[0].variants?.[0] || {
+        id: variantId,
+        sku: "SKU-PROD",
+        name: foundProduct?.name || "Thiết bị công nghệ",
+        price: 15000000,
+        stock: 50,
+      };
     }
 
     const currentCart = getLocalCart();
+    const targetVariantId = foundVariant?.id || variantId;
     const existingIndex = currentCart.items.findIndex(
-      (item) => item.variantId === (foundVariant?.id || variantId)
+      (item) => item.variantId === targetVariantId || item.variant?.id === targetVariantId
     );
+
+    const price = foundVariant?.price ?? foundProduct?.price ?? 15000000;
 
     if (existingIndex > -1) {
       currentCart.items[existingIndex].quantity += quantity;
     } else {
       currentCart.items.push({
         id: "cart-item-" + Date.now(),
-        variantId: foundVariant?.id || variantId,
+        variantId: targetVariantId,
         quantity,
         variant: {
-          id: foundVariant?.id || variantId,
-          sku: foundVariant?.sku || "SKU-PROD",
+          id: targetVariantId,
+          sku: foundVariant?.sku || `SKU-${foundProduct?.id || "PROD"}`,
           name: foundVariant?.name || foundProduct?.name || "Sản phẩm công nghệ",
-          price: foundVariant?.price || 15000000,
+          price,
           compareAtPrice: foundVariant?.compareAtPrice,
           product: {
             id: foundProduct?.id || "prod-default",
             name: foundProduct?.name || "Thiết bị công nghệ",
             slug: foundProduct?.slug || "thiet-bi",
             images: foundProduct?.images || [
-              { url: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500" },
+              { url: foundProduct?.image || "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500" },
             ],
           },
         },
       });
     }
+
+    currentCart.total = currentCart.items.reduce(
+      (sum, item) => sum + item.quantity * (item.variant?.price || 15000000),
+      0
+    );
 
     saveLocalCart(currentCart);
     return { success: true, data: currentCart };
@@ -2268,6 +2385,75 @@ export const api = {
       } catch (e) {}
     }
 
+    // Đồng bộ với danh bạ khách hàng CRM TechCore
+    try {
+      const customers = getLocalCustomers();
+      const cPhone = String(orderData.phone || "").replace(/\D/g, "");
+      const cEmail = String(orderData.guestEmail || "").toLowerCase().trim();
+      const custIdx = customers.findIndex((c: any) => {
+        const p1 = String(c.phone || "").replace(/\D/g, "");
+        return (cPhone && p1 && p1 === cPhone) || (cEmail && c.email?.toLowerCase() === cEmail);
+      });
+
+      if (custIdx !== -1) {
+        customers[custIdx].ordersCount = (customers[custIdx].ordersCount || 0) + 1;
+        customers[custIdx].ltvAmount = (customers[custIdx].ltvAmount || 0) + finalGrandTotal;
+        customers[custIdx].lastOrderDate =
+          "Hôm nay • " + new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+        if (customers[custIdx].ltvAmount >= 500000000) {
+          customers[custIdx].vipTier = "VIP Titanium";
+          customers[custIdx].vipTierCode = "titanium";
+        } else if (customers[custIdx].ltvAmount >= 100000000) {
+          customers[custIdx].vipTier = "VIP Platinum";
+          customers[custIdx].vipTierCode = "platinum";
+        } else if (customers[custIdx].ltvAmount >= 30000000) {
+          customers[custIdx].vipTier = "VIP Gold";
+          customers[custIdx].vipTierCode = "gold";
+        }
+      } else {
+        customers.unshift({
+          id: "cust-" + Date.now(),
+          code: "KH-ORD-" + Math.floor(100 + Math.random() * 900),
+          name: orderData.receiverName || "Khách Hàng Mua Sắm",
+          representative: orderData.receiverName || "Khách Hàng Mua Sắm",
+          type: "personal",
+          email: orderData.guestEmail || `customer_${Date.now()}@techcore.vn`,
+          phone: orderData.phone || "0987654321",
+          address: `${orderData.street || ""}, ${orderData.ward || ""}, ${orderData.district || ""}, ${orderData.province || ""}`.replace(/^, /, ""),
+          hub: "Hub Vận Chuyển",
+          vipTier: finalGrandTotal >= 30000000 ? "VIP Gold" : "Thành viên Bạc",
+          vipTierCode: finalGrandTotal >= 30000000 ? "gold" : "silver",
+          techPoints: Math.floor(finalGrandTotal / 100000),
+          ltvAmount: finalGrandTotal,
+          ordersCount: 1,
+          status: "active",
+          statusText: "Hoạt động",
+          joinedDate: new Date().toLocaleDateString("vi-VN"),
+          primaryHardware: orderItems[0]?.productName || "Đơn hàng TechCore",
+          assignedEngineer: "KTV Điều Phối CoolVan",
+          note: `Đặt đơn hàng #${orderCode} - Thanh toán: ${orderData.paymentMethod?.toUpperCase()}`,
+        });
+      }
+      saveLocalCustomers(customers);
+    } catch (e) {}
+
+    // Đồng bộ kho hàng và e-Shield cho các sản phẩm trong đơn
+    try {
+      const invEdits = JSON.parse(localStorage.getItem("tech_inventory_edits") || "{}");
+      for (const it of orderItems) {
+        if (it.serialNumber) {
+          invEdits[it.serialNumber] = {
+            status: "reserved",
+            statusText: `Đã xuất theo đơn #${orderCode}`,
+            orderCode,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+      }
+      localStorage.setItem("tech_inventory_edits", JSON.stringify(invEdits));
+      window.dispatchEvent(new CustomEvent("techcore:inventory-changed", { detail: { invEdits } }));
+    } catch (e) {}
+
     // Làm trống giỏ hàng sau khi đặt thành công
     saveLocalCart({ id: "cart-local", items: [], total: 0 });
 
@@ -2275,6 +2461,7 @@ export const api = {
       try {
         window.dispatchEvent(new CustomEvent("techcore:orders-changed", { detail: { newOrder } }));
         window.dispatchEvent(new CustomEvent("techcore:vouchers-changed", { detail: { voucherCode: orderData.voucherCode } }));
+        window.dispatchEvent(new CustomEvent("techcore:customers-changed", { detail: { orderCode } }));
       } catch (e) {}
     }
 
@@ -2513,93 +2700,135 @@ export const api = {
     if (res.success && res.data) return res;
 
     const cleanSerial = serial.trim().toUpperCase();
-
-    // 1. Kiểm tra mẫu thiết bị Laptop Gaming ROG
-    if (cleanSerial === "ROG16-2024-001") {
-      return {
-        success: true,
-        data: {
-          serialNumber: "ROG16-2024-001",
-          status: "sold",
-          isExpired: false,
-          productName: "Laptop Gaming ASUS ROG Strix G16 (2024)",
-          variantName: "Core i9 / 32GB RAM / 1TB SSD / RTX 4070",
-          brand: "ASUS",
-          image: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=400",
-          warrantyMonths: 24,
-          warrantyStart: "2026-10-15T00:00:00.000Z",
-          warrantyEnd: "2028-10-15T00:00:00.000Z",
-        },
-      };
+    if (!cleanSerial) {
+      return { success: false, error: { message: "Vui lòng nhập số Serial hoặc IMEI hợp lệ." } };
     }
 
-    // 2. Mẫu Điện thoại iPhone 16 Pro Max
-    if (cleanSerial === "IMEI-354892019283741") {
-      return {
-        success: true,
-        data: {
-          serialNumber: "IMEI-354892019283741",
-          status: "sold",
-          isExpired: false,
-          productName: "iPhone 16 Pro Max 256GB Chính Hãng VN/A",
-          variantName: "Titan Sa Mạc - 256GB",
-          brand: "Apple",
-          image: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400",
-          warrantyMonths: 12,
-          warrantyStart: "2026-10-01T00:00:00.000Z",
-          warrantyEnd: "2027-10-01T00:00:00.000Z",
-        },
-      };
-    }
-
-    // 3. Mẫu Card màn hình RTX 4080 Super
-    if (cleanSerial === "VGA-4080S-001") {
-      return {
-        success: true,
-        data: {
-          serialNumber: "VGA-4080S-001",
-          status: "sold",
-          isExpired: false,
-          productName: "Card Màn Hình ASUS ROG Strix GeForce RTX 4080 SUPER 16GB OC",
-          variantName: "Phiên bản OC Edition 16GB GDDR6X",
-          brand: "ASUS",
-          image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=400",
-          warrantyMonths: 36,
-          warrantyStart: "2026-09-01T00:00:00.000Z",
-          warrantyEnd: "2029-09-01T00:00:00.000Z",
-        },
-      };
-    }
-
-    // Kiểm tra trong danh sách đơn hàng đã đặt
+    // 1. Tra cứu trong Lịch sử Đơn hàng (Cả Seed Orders và Đơn hàng khách vừa đặt)
     const allOrders = [...getLocalOrders(), ...DEFAULT_SEED_ORDERS];
     for (const ord of allOrders) {
       for (const item of ord.items || []) {
-        if (item.serialNumber && item.serialNumber.toUpperCase() === cleanSerial) {
+        const itSerial = String(item.serialNumber || "").trim().toUpperCase();
+        if (
+          itSerial &&
+          (itSerial === cleanSerial || cleanSerial.includes(itSerial) || itSerial.includes(cleanSerial))
+        ) {
+          const orderDate = ord.createdAt ? new Date(ord.createdAt) : new Date();
+          const warrantyMonths =
+            item.productName?.toLowerCase().includes("vga") ||
+            item.productName?.toLowerCase().includes("cpu")
+              ? 36
+              : 24;
+          const warrantyEnd = new Date(
+            orderDate.getTime() + warrantyMonths * 30 * 24 * 60 * 60 * 1000
+          );
+          const isExpired = new Date() > warrantyEnd;
+
           return {
             success: true,
             data: {
               serialNumber: item.serialNumber,
-              status: "sold",
-              isExpired: false,
+              status: isExpired ? "expired" : "active",
+              isExpired,
               productName: item.productName,
-              variantName: item.sku,
-              brand: "TechCore Verified",
-              image: "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=400",
-              warrantyMonths: 24,
-              warrantyStart: ord.createdAt,
-              warrantyEnd: new Date(
-                new Date(ord.createdAt).getTime() + 24 * 30 * 24 * 60 * 60 * 1000
-              ).toISOString(),
+              variantName: item.sku || "Chính hãng TechCore e-Shield",
+              brand: item.productName?.includes("ASUS")
+                ? "ASUS ROG"
+                : item.productName?.includes("Apple")
+                ? "Apple"
+                : item.productName?.includes("Intel")
+                ? "Intel"
+                : "TechCore Verified",
+              image:
+                item.image ||
+                "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=400",
+              warrantyMonths,
+              warrantyStart: orderDate.toISOString(),
+              warrantyEnd: warrantyEnd.toISOString(),
+              customerName: ord.receiverName,
+              orderCode: ord.code,
+              hubLocation: ord.province || "Hub Landmark 81 (TP.HCM)",
             },
           };
         }
       }
     }
 
+    // 2. Tra cứu trong Kho hàng & e-Shield Ledger (Inventory)
+    const invRes = await api.getAdminInventory();
+    if (invRes.success && Array.isArray(invRes.data)) {
+      const invMatch = invRes.data.find(
+        (item: any) =>
+          String(item.serialNumber || "").trim().toUpperCase() === cleanSerial ||
+          String(item.eshieldId || "").trim().toUpperCase() === cleanSerial ||
+          String(item.id || "").trim().toUpperCase() === cleanSerial
+      );
+      if (invMatch) {
+        const impDate = invMatch.importDate ? new Date() : new Date();
+        return {
+          success: true,
+          data: {
+            serialNumber: invMatch.serialNumber,
+            status: invMatch.status === "in_stock" ? "in_stock" : "active",
+            isExpired: false,
+            productName: invMatch.productName,
+            variantName: `${invMatch.sku} • e-Shield Hash: ${invMatch.eshieldId || "SHA256-VERIFIED"}`,
+            brand: invMatch.brand || "TechCore Official",
+            image:
+              invMatch.image ||
+              "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=400",
+            warrantyMonths: 36,
+            warrantyStart: impDate.toISOString(),
+            warrantyEnd: new Date(
+              impDate.getTime() + 36 * 30 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            customerName: "Sản phẩm xác thực nguồn gốc e-Shield",
+            orderCode: invMatch.orderCode || "NHAP-KHO-CHINH-HANG",
+            hubLocation: invMatch.hubLocation || "Tổng kho TechCore",
+          },
+        };
+      }
+    }
+
+    // 3. Tra cứu trong Sổ bảo hành RMA
+    const wRes = await api.getAdminWarranty();
+    if (wRes.success && Array.isArray(wRes.data)) {
+      const wMatch = wRes.data.find(
+        (rma: any) =>
+          String(rma.serialNumber || "").trim().toUpperCase() === cleanSerial ||
+          String(rma.code || "").trim().toUpperCase() === cleanSerial
+      );
+      if (wMatch) {
+        return {
+          success: true,
+          data: {
+            serialNumber: wMatch.serialNumber,
+            status: "rma_processing",
+            isExpired: false,
+            productName: wMatch.productName,
+            variantName: `Phiếu RMA #${wMatch.code} • KTV: ${wMatch.assignedTech || "Đang xử lý"}`,
+            brand: "TechCare+ RMA Service",
+            image:
+              "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=400",
+            warrantyMonths: 36,
+            warrantyStart: wMatch.receivedDate || new Date().toISOString(),
+            warrantyEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+            customerName: wMatch.customerName,
+            orderCode: wMatch.code,
+            hubLocation: wMatch.hubLocation || "Trung tâm Bảo hành TechCare+",
+            rmaIssue: wMatch.issueDescription,
+            rmaStatusText: wMatch.statusText,
+          },
+        };
+      }
+    }
+
     return {
       success: false,
-      error: { message: "Không tìm thấy thông tin bảo hành cho Serial/IMEI này trên hệ thống." },
+      error: {
+        message:
+          "Không tìm thấy thông tin bảo hành cho Serial/IMEI này trên hệ thống. Vui lòng kiểm tra lại mã in trên vỏ hộp hoặc tem e-Shield.",
+      },
     };
   },
 
@@ -2612,26 +2841,7 @@ export const api = {
       } catch (e) {}
     }
 
-    let local: any[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("tech_customers");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) local = parsed;
-        }
-      } catch (e) {}
-    }
-
-    if (local.length === 0) {
-      local = DEFAULT_SEED_CUSTOMERS;
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem("tech_customers", JSON.stringify(DEFAULT_SEED_CUSTOMERS));
-        } catch (e) {}
-      }
-    }
-
+    const local = getLocalCustomers();
     const filtered = local.filter(
       (c: any) => !deletedIds.includes(c.id) && !deletedIds.includes(c.code)
     );
@@ -2669,50 +2879,35 @@ export const api = {
       note: customerData.note || "Khách hàng tạo trực tiếp từ CRM Admin",
     };
 
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("tech_customers");
-        const list = raw ? JSON.parse(raw) : [...DEFAULT_SEED_CUSTOMERS];
-        list.unshift(newCust);
-        localStorage.setItem("tech_customers", JSON.stringify(list));
-        window.dispatchEvent(new CustomEvent("techcore:customers-changed", { detail: list }));
-      } catch (e) {}
-    }
+    const list = getLocalCustomers();
+    list.unshift(newCust);
+    saveLocalCustomers(list);
 
     return { success: true, data: newCust };
   },
 
   updateAdminCustomer: async (customerId: string, patch: any) => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("tech_customers");
-        const list = raw ? JSON.parse(raw) : [...DEFAULT_SEED_CUSTOMERS];
-        const updated = list.map((c: any) => {
-          if (c.id === customerId || c.code === customerId) {
-            return { ...c, ...patch, updatedAt: new Date().toISOString() };
-          }
-          return c;
-        });
-        localStorage.setItem("tech_customers", JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent("techcore:customers-changed", { detail: updated }));
-      } catch (e) {}
-    }
+    const list = getLocalCustomers();
+    const updated = list.map((c: any) => {
+      if (c.id === customerId || c.code === customerId) {
+        return { ...c, ...patch, updatedAt: new Date().toISOString() };
+      }
+      return c;
+    });
+    saveLocalCustomers(updated);
     return { success: true, message: "Cập nhật thông tin khách hàng thành công" };
   },
 
   deleteAdminCustomer: async (customerId: string) => {
+    const list = getLocalCustomers();
+    const updated = list.filter((c: any) => c.id !== customerId && c.code !== customerId);
+    saveLocalCustomers(updated);
+
     if (typeof window !== "undefined") {
       try {
-        const raw = localStorage.getItem("tech_customers");
-        const list = raw ? JSON.parse(raw) : [...DEFAULT_SEED_CUSTOMERS];
-        const updated = list.filter((c: any) => c.id !== customerId && c.code !== customerId);
-        localStorage.setItem("tech_customers", JSON.stringify(updated));
-
         const hidden: string[] = JSON.parse(localStorage.getItem("deleted_customer_ids") || "[]");
         if (!hidden.includes(customerId)) hidden.push(customerId);
         localStorage.setItem("deleted_customer_ids", JSON.stringify(hidden));
-
-        window.dispatchEvent(new CustomEvent("techcore:customers-changed", { detail: updated }));
       } catch (e) {}
     }
     return { success: true, message: "Đã xóa khách hàng thành công" };
@@ -2727,8 +2922,9 @@ export const api = {
       } catch (e) {}
     }
 
-    // Chuyển đổi toàn bộ sản phẩm thực tế từ Storefront Catalog (MOCK_PRODUCTS)
-    const mappedStoreProducts = (MOCK_PRODUCTS || []).map((p: any, idx: number) => {
+    // Chuyển đổi toàn bộ sản phẩm thực tế từ Catalog Storefront kết hợp Custom Products
+    const all = getAllMergedProducts();
+    const mappedStoreProducts = all.map((p: any, idx: number) => {
       let specsObj: Record<string, string> = {};
       try {
         if (typeof p.specs === "string") {
@@ -2823,7 +3019,7 @@ export const api = {
     });
 
     // Kết hợp toàn bộ Danh Mục Sản Phẩm (Gồm các Máy trạm AI độc quyền + 27+ sản phẩm chính thức Storefront)
-    const masterSlugs = new Set(DEFAULT_SEED_ADMIN_PRODUCTS.map((p) => p.slug || p.sku));
+    const masterSlugs = new Set(DEFAULT_SEED_ADMIN_PRODUCTS.map((p: any) => p.slug || p.sku));
     const combinedDefaults = [
       ...DEFAULT_SEED_ADMIN_PRODUCTS,
       ...mappedStoreProducts.filter(

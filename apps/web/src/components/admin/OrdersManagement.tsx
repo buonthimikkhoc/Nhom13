@@ -46,6 +46,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ChevronDown,
+  Pencil,
 } from "lucide-react";
 import { formatVND } from "../../lib/utils";
 import { api } from "../../lib/api";
@@ -182,6 +183,20 @@ export function OrdersManagement({ searchQuery: globalSearch = "" }: OrdersManag
 
   // Modal Xem Trước Bảng Tính Excel & Tùy Chọn Xuất / In
   const [showExportPreviewModal, setShowExportPreviewModal] = useState(false);
+
+  // Chỉnh sửa tên / số hiệu xe giao vận trực tiếp tại bảng
+  const [editingVehicleOrderId, setEditingVehicleOrderId] = useState<string | null>(null);
+  const [tempVehicleValue, setTempVehicleValue] = useState<string>("");
+
+  // Chỉnh sửa chi tiết vận chuyển trong modal
+  const [isEditingShippingInModal, setIsEditingShippingInModal] = useState(false);
+  const [modalShippingForm, setModalShippingForm] = useState({
+    statusCode: "shipping" as OrderStatusCode,
+    vehicle: "",
+    driver: "",
+    note: "",
+    temperature: "21.5°C",
+  });
 
   // Toast thông báo thống nhất
   const showToast = (
@@ -416,6 +431,95 @@ export function OrdersManagement({ searchQuery: globalSearch = "" }: OrdersManag
       `Đã phân bổ đội xe "${vehicle}" cho đơn ${targetOrder?.code || ""}.`,
       "Điều phối vận chuyển"
     );
+  };
+
+  // Đồng bộ form vận chuyển khi mở modal chi tiết đơn
+  useEffect(() => {
+    if (activeDetailOrder) {
+      setModalShippingForm({
+        statusCode: (activeDetailOrder.shipping?.statusCode as OrderStatusCode) || "shipping",
+        vehicle: activeDetailOrder.shipping?.vehicle || "CoolVan #01",
+        driver: activeDetailOrder.shipping?.driver || "Phạm Tấn Tài • CoolVan Dispatch",
+        note: activeDetailOrder.shipping?.note || "Niêm phong tem e-Shield bảo mật",
+        temperature: activeDetailOrder.shipping?.temperature || "21.5°C",
+      });
+      setIsEditingShippingInModal(false);
+    }
+  }, [activeDetailOrder]);
+
+  // Lưu toàn bộ thông tin vận chuyển chỉnh sửa từ modal chi tiết đơn
+  const handleSaveModalShipping = async () => {
+    if (!activeDetailOrder) return;
+    const orderId = activeDetailOrder.id;
+    const statusLabels: Record<string, string> = {
+      pending: "Chờ xác nhận",
+      packing: "Đang đóng gói & S/N",
+      shipping: "Đang giao CoolVan",
+      completed: "Hoàn tất giao nhận",
+      returns: "Đổi trả / Bảo hành",
+    };
+
+    const newVehicle = modalShippingForm.vehicle.trim() || activeDetailOrder.shipping?.vehicle || "CoolVan #01";
+    const newDriver = modalShippingForm.driver.trim() || activeDetailOrder.shipping?.driver || "Phạm Tấn Tài • CoolVan Dispatch";
+    const newNote = modalShippingForm.note.trim() || activeDetailOrder.shipping?.note || "Niêm phong tem e-Shield bảo mật";
+    const newTemp = modalShippingForm.temperature.trim() || activeDetailOrder.shipping?.temperature || "21.5°C";
+
+    const updatedShipping = {
+      ...activeDetailOrder.shipping,
+      statusCode: modalShippingForm.statusCode,
+      statusText: statusLabels[modalShippingForm.statusCode] || "Chờ xử lý",
+      vehicle: newVehicle,
+      driver: newDriver,
+      note: newNote,
+      temperature: newTemp,
+    };
+
+    const updatedOrder = {
+      ...activeDetailOrder,
+      shipping: updatedShipping,
+    };
+
+    setActiveDetailOrder(updatedOrder);
+
+    setOrdersList((prev) =>
+      prev.map((o) => (o.id === orderId ? updatedOrder : o))
+    );
+
+    // Lưu vào LocalStorage & API
+    try {
+      const apiStatus = modalShippingForm.statusCode === "returns" ? "cancelled" : modalShippingForm.statusCode;
+      await api.updateAdminOrderStatus(orderId, apiStatus);
+
+      const raw = localStorage.getItem("tech_orders");
+      if (raw) {
+        const list = JSON.parse(raw);
+        const updatedList = list.map((item: any) => {
+          if (item.id === orderId || item.code === orderId || item.code === `#${orderId}`) {
+            return {
+              ...item,
+              status: apiStatus,
+              shippingVehicle: newVehicle,
+              shippingDriver: newDriver,
+              shippingNote: newNote,
+              shippingTemp: newTemp,
+            };
+          }
+          return item;
+        });
+        localStorage.setItem("tech_orders", JSON.stringify(updatedList));
+      }
+    } catch (e) {}
+
+    broadcastOrderAction({
+      type: "UPDATE_STATUS",
+      orderCode: activeDetailOrder.code,
+      orderId,
+      statusText: `${statusLabels[modalShippingForm.statusCode]} (${newVehicle})`,
+      author: currentAdminName,
+    });
+
+    setIsEditingShippingInModal(false);
+    vipToast.success(`Đã cập nhật toàn bộ thông tin vận chuyển đơn ${activeDetailOrder.code}.`, "Lưu thành công");
   };
 
   // Xác nhận và xóa đơn hàng vĩnh viễn (Đồng bộ đa tab)
@@ -1062,23 +1166,23 @@ export function OrdersManagement({ searchQuery: globalSearch = "" }: OrdersManag
                       <td className="p-4">
                         <div className="space-y-1.5">
                           {/* 1. Bộ chọn nhanh Trạng Thái Vận Chuyển */}
-                          <div className="relative inline-flex items-center group">
+                          <div className="relative inline-flex items-center group/status">
                             <select
                               value={ord.shipping.statusCode}
                               onChange={(e) =>
                                 handleUpdateStatus(ord.id, e.target.value as OrderStatusCode)
                               }
-                              title="Bấm để chỉnh sửa trạng thái vận hành"
-                              className={`appearance-none cursor-pointer pl-6 pr-6 py-1 rounded-full text-[11px] font-bold border transition shadow-2xs outline-none hover:shadow-xs ${
+                              title="Bấm để chỉnh sửa trạng thái vận chuyển"
+                              className={`appearance-none cursor-pointer pl-6 pr-6 py-1 rounded-full text-[11px] font-bold border transition shadow-2xs outline-none hover:shadow-xs hover:ring-2 hover:ring-blue-400/40 ${
                                 ord.shipping.statusCode === "completed"
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100/80"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100/90"
                                   : ord.shipping.statusCode === "shipping"
-                                  ? "bg-cyan-50 text-cyan-700 border-cyan-300 hover:bg-cyan-100/80"
+                                  ? "bg-cyan-50 text-cyan-700 border-cyan-300 hover:bg-cyan-100/90"
                                   : ord.shipping.statusCode === "packing"
-                                  ? "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100/80"
+                                  ? "bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100/90"
                                   : ord.shipping.statusCode === "returns"
-                                  ? "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100/80"
-                                  : "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100/80"
+                                  ? "bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100/90"
+                                  : "bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100/90"
                               }`}
                             >
                               <option value="pending" className="bg-white text-slate-800">Chờ xác nhận</option>
@@ -1104,28 +1208,114 @@ export function OrdersManagement({ searchQuery: globalSearch = "" }: OrdersManag
                             />
 
                             {/* Biểu tượng mũi tên thả xuống */}
-                            <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60 group-hover:opacity-100 transition" />
+                            <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60 group-hover/status:opacity-100 transition" />
                           </div>
 
-                          {/* 2. Bộ chọn nhanh Đội Xe Điều Phối */}
-                          <div className="flex items-center gap-1">
-                            <Truck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                            <div className="relative inline-flex items-center">
-                              <select
-                                value={ord.shipping.vehicle}
-                                onChange={(e) => handleUpdateVehicle(ord.id, e.target.value)}
-                                title="Bấm để đổi đội xe giao nhận"
-                                className="appearance-none bg-transparent hover:bg-slate-100 text-[11px] font-medium text-slate-700 hover:text-blue-700 rounded px-1.5 pr-4 py-0.5 cursor-pointer outline-none border border-transparent hover:border-slate-200 transition"
+                          {/* 2. Bộ chọn & Chỉnh sửa Đội Xe Điều Phối */}
+                          {editingVehicleOrderId === ord.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={tempVehicleValue}
+                                onChange={(e) => setTempVehicleValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleUpdateVehicle(ord.id, tempVehicleValue.trim() || ord.shipping.vehicle);
+                                    setEditingVehicleOrderId(null);
+                                  } else if (e.key === "Escape") {
+                                    setEditingVehicleOrderId(null);
+                                  }
+                                }}
+                                placeholder="Nhập tên xe / đội vận chuyển..."
+                                className="px-2 py-0.5 text-[11px] bg-white border border-blue-500 rounded-lg font-medium text-slate-800 outline-none w-36 shadow-xs"
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleUpdateVehicle(ord.id, tempVehicleValue.trim() || ord.shipping.vehicle);
+                                  setEditingVehicleOrderId(null);
+                                }}
+                                title="Lưu tên xe"
+                                className="p-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition cursor-pointer"
                               >
-                                <option value="CoolVan #01">CoolVan #01</option>
-                                <option value="CoolVan #02">CoolVan #02</option>
-                                <option value="CoolVan #03">CoolVan #03</option>
-                                <option value="Hỏa tốc 2H (Aero)">Hỏa tốc 2H (Aero)</option>
-                                <option value="Keangnam Express">Keangnam Express</option>
-                              </select>
-                              <ChevronDown className="w-2.5 h-2.5 text-slate-400 pointer-events-none absolute right-0.5 top-1/2 -translate-y-1/2" />
+                                <Check className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingVehicleOrderId(null)}
+                                title="Hủy"
+                                className="p-1 rounded-md bg-slate-200 hover:bg-slate-300 text-slate-700 transition cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
                             </div>
-                          </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 group/veh">
+                              <Truck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                              <div className="relative inline-flex items-center">
+                                <select
+                                  value={
+                                    [
+                                      "CoolVan #01",
+                                      "CoolVan #02",
+                                      "CoolVan #03",
+                                      "Hỏa tốc 2H (Aero)",
+                                      "Keangnam Express",
+                                      "Viettel Post Pro",
+                                      "Khách tự lấy tại Kho",
+                                    ].includes(ord.shipping.vehicle)
+                                      ? ord.shipping.vehicle
+                                      : "custom"
+                                  }
+                                  onChange={(e) => {
+                                    if (e.target.value === "custom") {
+                                      setEditingVehicleOrderId(ord.id);
+                                      setTempVehicleValue(ord.shipping.vehicle || "");
+                                    } else {
+                                      handleUpdateVehicle(ord.id, e.target.value);
+                                    }
+                                  }}
+                                  title="Bấm để đổi đội xe giao nhận"
+                                  className="appearance-none bg-slate-100/90 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-[11px] font-semibold text-slate-700 hover:text-blue-700 rounded-lg px-2 pr-5 py-0.5 cursor-pointer outline-none transition shadow-2xs"
+                                >
+                                  <option value="CoolVan #01">CoolVan #01</option>
+                                  <option value="CoolVan #02">CoolVan #02</option>
+                                  <option value="CoolVan #03">CoolVan #03</option>
+                                  <option value="Hỏa tốc 2H (Aero)">Hỏa tốc 2H (Aero)</option>
+                                  <option value="Keangnam Express">Keangnam Express</option>
+                                  <option value="Viettel Post Pro">Viettel Post Pro</option>
+                                  <option value="Khách tự lấy tại Kho">Khách tự lấy tại Kho</option>
+                                  <option value="custom">
+                                    {![
+                                      "CoolVan #01",
+                                      "CoolVan #02",
+                                      "CoolVan #03",
+                                      "Hỏa tốc 2H (Aero)",
+                                      "Keangnam Express",
+                                      "Viettel Post Pro",
+                                      "Khách tự lấy tại Kho",
+                                    ].includes(ord.shipping.vehicle)
+                                      ? ord.shipping.vehicle
+                                      : "✏️ Nhập xe khác..."}
+                                  </option>
+                                </select>
+                                <ChevronDown className="w-2.5 h-2.5 text-slate-400 pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2" />
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingVehicleOrderId(ord.id);
+                                  setTempVehicleValue(ord.shipping.vehicle || "");
+                                }}
+                                title="Chỉnh sửa tên xe / số hiệu"
+                                className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -1389,22 +1579,132 @@ export function OrdersManagement({ searchQuery: globalSearch = "" }: OrdersManag
                       <Truck className="w-3.5 h-3.5 text-cyan-600" />
                       Vận chuyển chuyên dụng
                     </span>
-                    <span className="text-[9px] font-mono font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">
-                      {activeDetailOrder.shipping.vehicle}
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="font-bold text-slate-800 text-sm">{activeDetailOrder.shipping.driver}</p>
-                    <p className="text-slate-600 text-[11px]">Ghi chú: {activeDetailOrder.shipping.note}</p>
-                    <div className="flex items-center gap-3 pt-1 text-[11px]">
-                      <span className="bg-cyan-50 text-cyan-700 border border-cyan-200 px-2 py-0.5 rounded-lg font-bold">
-                        Nhiệt độ: {activeDetailOrder.shipping.temperature}
-                      </span>
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold">
-                        g-Sensor: 0.012G OK
-                      </span>
+                    <div className="flex items-center gap-1.5">
+                      {!isEditingShippingInModal ? (
+                        <>
+                          <span className="text-[9px] font-mono font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">
+                            {activeDetailOrder.shipping.vehicle}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingShippingInModal(true)}
+                            className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-0.5 rounded-md flex items-center gap-1 transition cursor-pointer"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            <span>Sửa</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={handleSaveModalShipping}
+                            className="text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-0.5 rounded-md flex items-center gap-1 transition shadow-xs cursor-pointer"
+                          >
+                            <Check className="w-3 h-3" />
+                            <span>Lưu</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingShippingInModal(false)}
+                            className="text-[10px] font-bold text-slate-600 hover:bg-slate-100 px-2 py-0.5 rounded-md transition cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {!isEditingShippingInModal ? (
+                    <div className="space-y-1.5">
+                      <p className="font-bold text-slate-800 text-sm">{activeDetailOrder.shipping.driver}</p>
+                      <p className="text-slate-600 text-[11px]">Ghi chú: {activeDetailOrder.shipping.note}</p>
+                      <div className="flex items-center gap-3 pt-1 text-[11px]">
+                        <span className="bg-cyan-50 text-cyan-700 border border-cyan-200 px-2 py-0.5 rounded-lg font-bold">
+                          Nhiệt độ: {activeDetailOrder.shipping.temperature}
+                        </span>
+                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold">
+                          g-Sensor: 0.012G OK
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pt-1 text-xs">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Trạng thái vận chuyển:</label>
+                        <select
+                          value={modalShippingForm.statusCode}
+                          onChange={(e) =>
+                            setModalShippingForm({
+                              ...modalShippingForm,
+                              statusCode: e.target.value as OrderStatusCode,
+                            })
+                          }
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500"
+                        >
+                          <option value="pending">Chờ xác nhận</option>
+                          <option value="packing">Đang đóng gói &amp; S/N</option>
+                          <option value="shipping">Đang giao CoolVan</option>
+                          <option value="completed">Hoàn tất giao nhận</option>
+                          <option value="returns">Đổi trả / Bảo hành</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Đội xe / Phương tiện:</label>
+                          <input
+                            type="text"
+                            value={modalShippingForm.vehicle}
+                            onChange={(e) =>
+                              setModalShippingForm({ ...modalShippingForm, vehicle: e.target.value })
+                            }
+                            placeholder="VD: CoolVan #01..."
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 outline-none focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Nhiệt độ khoang:</label>
+                          <input
+                            type="text"
+                            value={modalShippingForm.temperature}
+                            onChange={(e) =>
+                              setModalShippingForm({ ...modalShippingForm, temperature: e.target.value })
+                            }
+                            placeholder="VD: 21.5°C"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 outline-none focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Tài xế &amp; Điều phối viên:</label>
+                        <input
+                          type="text"
+                          value={modalShippingForm.driver}
+                          onChange={(e) =>
+                            setModalShippingForm({ ...modalShippingForm, driver: e.target.value })
+                          }
+                          placeholder="Họ tên tài xế..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-0.5">Ghi chú niêm phong:</label>
+                        <input
+                          type="text"
+                          value={modalShippingForm.note}
+                          onChange={(e) =>
+                            setModalShippingForm({ ...modalShippingForm, note: e.target.value })
+                          }
+                          placeholder="Ghi chú giao nhận..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

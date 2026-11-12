@@ -308,7 +308,7 @@ export default function CartPage() {
                   <Tag className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="text"
-                    placeholder="Nhập mã voucher (VD: TECHNEW100K, FREESHIP)..."
+                    placeholder="Nhập mã voucher giảm giá..."
                     value={voucherCode}
                     onChange={(e) => {
                       setVoucherCode(e.target.value);
@@ -323,26 +323,6 @@ export default function CartPage() {
                 >
                   Áp dụng
                 </button>
-              </div>
-
-              {/* Gợi ý mã nhanh */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                <span className="text-[10px] text-slate-400 font-medium">Gợi ý mã:</span>
-                {[
-                  { code: "FREESHIP", label: "FREESHIP (0₫ Ship)" },
-                  { code: "TECHNEW100K", label: "TECHNEW100K (-100K)" },
-                  { code: "GAMING2026", label: "GAMING2026 (-5%)" },
-                ].map((item) => (
-                  <button
-                    key={item.code}
-                    type="button"
-                    onClick={() => handleApplyVoucher(undefined, item.code)}
-                    disabled={appliedVouchers.some((v) => v.code.toUpperCase() === item.code)}
-                    className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border border-dashed border-slate-300 text-slate-600 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50/50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
-                  >
-                    +{item.code}
-                  </button>
-                ))}
               </div>
 
               {voucherError && (
@@ -426,14 +406,9 @@ export default function CartPage() {
               )}
               <div className="flex justify-between items-center">
                 <span>Phí vận chuyển:</span>
-                <div className="text-right">
-                  <span className="font-bold text-slate-900">
-                    {shippingFee === 0 ? <strong className="text-emerald-600">Miễn phí giao hàng</strong> : formatVND(shippingFee)}
-                  </span>
-                  {shippingFee > 0 && (
-                    <div className="text-[10px] text-slate-400">Chưa áp mã freeship</div>
-                  )}
-                </div>
+                <span className="font-bold text-slate-900">
+                  {shippingFee === 0 ? <strong className="text-emerald-600">Miễn phí giao hàng</strong> : formatVND(shippingFee)}
+                </span>
               </div>
             </div>
 

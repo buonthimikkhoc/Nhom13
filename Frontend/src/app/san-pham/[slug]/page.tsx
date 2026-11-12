@@ -20,6 +20,7 @@ import { Product, ProductVariant } from "../../../types";
 import { formatVND } from "../../../lib/utils";
 import { useCart } from "../../../context/CartContext";
 import ProductCard from "../../../components/product/ProductCard";
+import ProductReviewsSection from "../../../components/product/ProductReviewsSection";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -314,6 +315,14 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Customer Reviews & Rating System */}
+      <ProductReviewsSection
+        productSlug={product.slug}
+        productName={product.name}
+        initialRating={product.avgRating}
+        initialReviewCount={product.reviewCount}
+      />
 
       {/* Related Products */}
       {product.relatedProducts && product.relatedProducts.length > 0 && (

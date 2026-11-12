@@ -126,10 +126,10 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { name: "Linh Kiện PC", href: "/danh-muc/linh-kien-pc" },
+    { name: "Linh Kiện", href: "/danh-muc/linh-kien-pc" },
     { name: "AI Workstation", href: "/#workstations" },
-    { name: "Laptop & Smartphone", href: "/danh-muc/laptop" },
-    { name: "Phụ Kiện Hi-End", href: "/danh-muc/phu-kien-gaming" },
+    { name: "Laptop & Phone", href: "/danh-muc/laptop" },
+    { name: "Phụ Kiện Gear", href: "/danh-muc/phu-kien-gaming" },
     { name: "TechCare+", href: "/#techcare" },
   ];
 
@@ -151,8 +151,8 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* --- Center: Nav Menu Items (Gọn gàng dạng Pill, bỏ chữ Trang Chủ) --- */}
-        <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5">
+        {/* --- Center: Nav Menu Items (Gọn gàng dạng Pill, không bao giờ rớt dòng) --- */}
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-2 shrink-0">
           {navLinks.map((link) => {
             const isActive = link.href.startsWith("/#")
               ? false
@@ -161,7 +161,7 @@ export default function Navbar() {
               <Link
                 key={link.name}
                 href={link.href}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`px-2.5 py-1.5 xl:px-3 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                   isActive
                     ? "bg-blue-50 text-blue-600 shadow-xs"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
@@ -176,7 +176,7 @@ export default function Navbar() {
         {/* --- Right: Search, Tra Cứu, Cart, Account Dropdown --- */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Quick Search Input (Desktop) */}
-          <div ref={searchRef} className="relative hidden md:block w-40 lg:w-56 xl:w-64">
+          <div ref={searchRef} className="relative hidden md:block w-36 lg:w-44 xl:w-56">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
@@ -293,20 +293,11 @@ export default function Navbar() {
                 )}
               </div>
 
-              <div className="hidden sm:flex items-center gap-1.5 text-left text-xs">
-                <span className="font-extrabold text-slate-800 truncate max-w-[85px]">
+              <div className="hidden sm:flex items-center gap-1 text-left text-xs">
+                <span className="font-extrabold text-slate-800 truncate max-w-[110px]">
                   {user ? (user.fullName.split(" ").slice(-1)[0] || user.fullName) : "Tài Khoản"}
                 </span>
-                {user && user.role === "admin" ? (
-                  <span className="px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-black border border-rose-200 flex items-center gap-0.5">
-                    <Shield className="w-2.5 h-2.5 text-rose-600" />
-                    <span>Admin</span>
-                  </span>
-                ) : user ? (
-                  <span className="px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
-                    VIP
-                  </span>
-                ) : (
+                {!user && (
                   <span className="text-[10px] text-slate-400 font-semibold">Đăng nhập</span>
                 )}
               </div>

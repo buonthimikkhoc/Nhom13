@@ -15,6 +15,41 @@ export default function CartPage() {
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherSuccess, setVoucherSuccess] = useState<string | null>(null);
 
+  // State xác nhận xóa sản phẩm khỏi giỏ hàng
+  const [itemToDelete, setItemToDelete] = useState<{
+    id: string;
+    name: string;
+    variantName?: string;
+    price?: number;
+    image?: string;
+  } | null>(null);
+
+  // Toast thông báo sau khi xóa
+  const [deleteToast, setDeleteToast] = useState<string | null>(null);
+
+  const promptDeleteItem = (item: any) => {
+    setItemToDelete({
+      id: item.id,
+      name: item.variant?.product?.name || "Sản phẩm",
+      variantName: item.variant?.name,
+      price: item.variant?.price,
+      image:
+        item.variant?.product?.images?.[0]?.url ||
+        "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=200",
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!itemToDelete) return;
+    const removedName = itemToDelete.name;
+    removeItem(itemToDelete.id);
+    setItemToDelete(null);
+    setDeleteToast(`Đã xóa "${removedName}" khỏi giỏ hàng.`);
+    setTimeout(() => {
+      setDeleteToast(null);
+    }, 4000);
+  };
+
   // Tự động khôi phục voucher đã áp dụng trước đó trong phiên
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -154,24 +189,35 @@ export default function CartPage() {
                     <div className="flex items-center gap-3 mt-3">
                       <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50 text-xs">
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="px-2.5 py-1 hover:bg-slate-200 font-bold text-slate-600"
+                          type="button"
+                          onClick={() => {
+                            if (item.quantity <= 1) {
+                              promptDeleteItem(item);
+                            } else {
+                              updateQuantity(item.id, item.quantity - 1);
+                            }
+                          }}
+                          className="px-2.5 py-1 hover:bg-slate-200 font-bold text-slate-600 cursor-pointer transition active:scale-95"
+                          title="Giảm số lượng"
                         >
                           -
                         </button>
                         <span className="px-3 py-1 font-bold bg-white text-slate-800">{item.quantity}</span>
                         <button
+                          type="button"
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="px-2.5 py-1 hover:bg-slate-200 font-bold text-slate-600"
+                          className="px-2.5 py-1 hover:bg-slate-200 font-bold text-slate-600 cursor-pointer transition active:scale-95"
+                          title="Tăng số lượng"
                         >
                           +
                         </button>
                       </div>
 
                       <button
-                        onClick={() => removeItem(item.id)}
-                        className="text-slate-400 hover:text-red-600 transition p-1"
-                        title="Xóa sản phẩm"
+                        type="button"
+                        onClick={() => promptDeleteItem(item)}
+                        className="text-slate-400 hover:text-red-600 transition p-1.5 rounded-lg hover:bg-red-50 cursor-pointer active:scale-95"
+                        title="Xóa sản phẩm khỏi giỏ hàng"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -292,6 +338,68 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Xác Nhận Xóa Sản Phẩm Khỏi Giỏ Hàng */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+                <Trash2 className="w-6 h-6 text-red-500 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">Xác Nhận Xóa Sản Phẩm?</h3>
+                <p className="text-xs text-slate-500">Thao tác này sẽ bỏ sản phẩm ra khỏi giỏ hàng của bạn.</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3.5">
+              <img
+                src={itemToDelete.image}
+                alt={itemToDelete.name}
+                className="w-14 h-14 object-contain rounded-xl bg-white border p-1 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{itemToDelete.name}</h4>
+                {itemToDelete.variantName && (
+                  <p className="text-[11px] text-slate-500">{itemToDelete.variantName}</p>
+                )}
+                {itemToDelete.price && (
+                  <p className="text-xs font-black text-red-600 mt-0.5">{formatVND(itemToDelete.price)}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setItemToDelete(null)}
+                className="px-4 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer active:scale-95"
+              >
+                Hủy Bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-md shadow-red-500/25 transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-white" />
+                <span>Xác Nhận Xóa</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast thông báo sau khi xóa thành công */}
+      {deleteToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-700 animate-in slide-in-from-bottom duration-300">
+          <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <span className="text-xs font-bold">{deleteToast}</span>
+        </div>
+      )}
     </div>
   );
 }

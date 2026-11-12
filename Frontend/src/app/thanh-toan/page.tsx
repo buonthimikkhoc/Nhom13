@@ -509,7 +509,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between">
                 <span>Phí vận chuyển:</span>
                 <span className="font-bold text-slate-900">
-                  {shippingFee === 0 ? <strong className="text-emerald-600">Miễn phí CoolVan</strong> : formatVND(shippingFee)}
+                  {shippingFee === 0 ? <strong className="text-emerald-600">Miễn phí giao hàng</strong> : formatVND(shippingFee)}
                 </span>
               </div>
             </div>

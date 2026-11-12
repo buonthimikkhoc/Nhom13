@@ -179,7 +179,7 @@ export default function DonHangPage() {
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-50 text-cyan-700 border border-cyan-200 shadow-2xs">
             <Truck className="w-3.5 h-3.5 text-cyan-600 animate-bounce" />
-            Đang giao hàng (CoolVan)
+            Đang giao hàng
           </span>
         );
       case "completed":
@@ -572,7 +572,7 @@ export default function DonHangPage() {
                     Chi Tiết Hồ Sơ Đơn Hàng &amp; Vận Hành Giao Nhận
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Mã hóa chuỗi khối e-Shield • Vận chuyển bảo ôn CoolVan • Đối soát thời gian thực
+                    Mã hóa chuỗi khối e-Shield • Vận chuyển an toàn • Đối soát thời gian thực
                   </p>
                 </div>
 
@@ -596,7 +596,7 @@ export default function DonHangPage() {
                   const steps = [
                     { num: 1, title: "Tiếp Nhận", desc: "Xác thực đơn", active: stepIndex >= 1 },
                     { num: 2, title: "Đóng Gói", desc: "Khử tĩnh điện & S/N", active: stepIndex >= 2 },
-                    { num: 3, title: "CoolVan", desc: "Đang giao bảo ôn", active: stepIndex >= 3 },
+                    { num: 3, title: "Giao Hàng", desc: "Đang vận chuyển", active: stepIndex >= 3 },
                     { num: 4, title: "Nghiệm Thu", desc: "Bàn giao e-Shield", active: stepIndex >= 4 },
                   ];
 
@@ -657,7 +657,7 @@ export default function DonHangPage() {
                 {/* Vận chuyển */}
                 <div className="bg-white p-4.5 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-                    ĐỊA CHỈ &amp; ĐIỀU PHỐI COOLVAN
+                    ĐỊA CHỈ &amp; ĐIỀU PHỐI GIAO HÀNG
                   </span>
                   <div className="space-y-1 text-xs">
                     <p className="text-slate-800 font-semibold leading-relaxed flex items-start gap-1.5">

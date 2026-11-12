@@ -92,7 +92,7 @@ export function VoucherManagement() {
               ? `Giảm ${formatVND(v.value)}`
               : v.type === "percent"
               ? `Giảm ${v.value}%${v.maxDiscount ? ` (Tối đa ${formatVND(v.maxDiscount)})` : ""}`
-              : `Miễn phí CoolVan`,
+              : `Miễn phí vận chuyển`,
           minOrderValue: v.minOrder,
           targetAudience: v.targetAudience || "Mọi khách hàng",
           category: v.category || "vip",

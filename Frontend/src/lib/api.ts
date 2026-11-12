@@ -1315,7 +1315,7 @@ export const DEFAULT_SEED_VOUCHERS: AdminVoucher[] = [
   {
     id: "vouch-04",
     code: "FREESHIP",
-    name: "Miễn Phí Vận Chuyển Chuyên Dụng Xe Lạnh CoolVan",
+    name: "Miễn Phí Vận Chuyển Toàn Quốc (FREESHIP)",
     type: "freeship",
     value: 30000,
     minOrder: 500000,
@@ -1325,9 +1325,9 @@ export const DEFAULT_SEED_VOUCHERS: AdminVoucher[] = [
     endsAt: "2026-12-31",
     isActive: true,
     targetAudience: "Toàn bộ khách hàng TechCore",
-    category: "coolvan",
-    sponsor: "CoolVan Logistics Dispatch",
-    description: "Miễn phí vận chuyển bảo ôn 21°C cho đơn hàng linh kiện từ 500.000 ₫.",
+    category: "vip",
+    sponsor: "TechCore Logistics Network",
+    description: "Miễn phí vận chuyển toàn quốc cho đơn hàng linh kiện từ 500.000 ₫.",
     recentOrders: ["#TECH-2026-5520", "#TECH-2026-5412"],
   },
   {
@@ -1414,7 +1414,21 @@ export function getLocalVouchers(): AdminVoucher[] {
       return DEFAULT_SEED_VOUCHERS;
     }
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Chuẩn hóa nếu còn lưu trữ tên cũ
+      return parsed.map((v) => {
+        if (v.code === "FREESHIP" && v.name && v.name.includes("CoolVan")) {
+          return {
+            ...v,
+            name: "Miễn Phí Vận Chuyển Toàn Quốc (FREESHIP)",
+            description: "Miễn phí vận chuyển toàn quốc cho đơn hàng linh kiện từ 500.000 ₫.",
+            sponsor: "TechCore Logistics Network",
+            category: "vip",
+          };
+        }
+        return v;
+      });
+    }
   } catch (e) {}
   return DEFAULT_SEED_VOUCHERS;
 }
@@ -2340,7 +2354,20 @@ export const api = {
 
     const calculatedTotal = orderItems.reduce((sum: number, it: any) => sum + it.lineTotal, 0);
     const voucherDiscount = Number(orderData.discountTotal || orderData.discount || 0);
-    const shippingFee = (calculatedTotal > 2000000 || orderData.voucherCode === "FREESHIP") ? 0 : 30000;
+
+    // Xử lý danh sách mã voucher áp dụng (hỗ trợ nhiều mã không trùng)
+    const appliedCodes: string[] = Array.isArray(orderData.voucherCodes)
+      ? orderData.voucherCodes.map((c: any) => String(c).trim().toUpperCase()).filter(Boolean)
+      : (orderData.voucherCode
+          ? String(orderData.voucherCode).split(",").map((s: string) => s.trim().toUpperCase()).filter(Boolean)
+          : []);
+
+    // Loại bỏ mã trùng lặp nếu có
+    const uniqueAppliedCodes = Array.from(new Set(appliedCodes));
+
+    // Phí vận chuyển: CHỈ miễn phí khi người dùng áp dụng mã FREESHIP (không tự động miễn phí dù đơn giá trị cao)
+    const hasFreeShipping = Boolean(orderData.hasFreeShipping) || uniqueAppliedCodes.some((c) => c === "FREESHIP" || c.startsWith("FREESHIP"));
+    const shippingFee = hasFreeShipping ? 0 : 30000;
     const finalGrandTotal = Math.max(0, calculatedTotal - voucherDiscount + shippingFee);
 
     const newOrder = {
@@ -2358,7 +2385,9 @@ export const api = {
       paymentStatus: orderData.paymentMethod === "cod" ? "pending" : "paid",
       status: "pending",
       subtotal: calculatedTotal,
-      voucherCode: orderData.voucherCode || null,
+      voucherCode: uniqueAppliedCodes.join(", ") || null,
+      voucherCodes: uniqueAppliedCodes,
+      hasFreeShipping,
       discountTotal: voucherDiscount,
       shippingFee,
       grandTotal: finalGrandTotal,
@@ -2370,18 +2399,21 @@ export const api = {
     localOrders.unshift(newOrder);
     saveLocalOrders(localOrders);
 
-    // Cập nhật số lượt dùng của Voucher nếu có
-    if (orderData.voucherCode) {
+    // Cập nhật số lượt dùng của các Voucher đã áp dụng
+    if (uniqueAppliedCodes.length > 0) {
       try {
-        const cleanVCode = String(orderData.voucherCode).trim().toUpperCase();
         const vList = getLocalVouchers();
-        const vIdx = vList.findIndex((v) => v.code.toUpperCase() === cleanVCode);
-        if (vIdx !== -1) {
-          vList[vIdx].usedCount = (vList[vIdx].usedCount || 0) + 1;
-          if (!vList[vIdx].recentOrders) vList[vIdx].recentOrders = [];
-          vList[vIdx].recentOrders.unshift(orderCode);
-          saveLocalVouchers(vList);
+        let changed = false;
+        for (const cleanVCode of uniqueAppliedCodes) {
+          const vIdx = vList.findIndex((v) => v.code.toUpperCase() === cleanVCode);
+          if (vIdx !== -1) {
+            vList[vIdx].usedCount = (vList[vIdx].usedCount || 0) + 1;
+            if (!vList[vIdx].recentOrders) vList[vIdx].recentOrders = [];
+            vList[vIdx].recentOrders.unshift(orderCode);
+            changed = true;
+          }
         }
+        if (changed) saveLocalVouchers(vList);
       } catch (e) {}
     }
 
@@ -3542,14 +3574,21 @@ export const api = {
       discount = 30000;
     }
 
-    const finalAmount = Math.max(0, orderSubtotal - discount);
+    const isFreeship = voucher.type === "freeship" || voucher.code.toUpperCase() === "FREESHIP";
+    // Tiền giảm trừ trực tiếp vào giá sản phẩm (nếu là freeship thì giảm trừ vào phí vận chuyển riêng)
+    const productDiscount = isFreeship ? 0 : discount;
+    const finalAmount = Math.max(0, orderSubtotal - productDiscount);
 
     return {
       success: true,
       voucher,
-      discount,
+      discount: productDiscount,
+      shippingDiscount: isFreeship ? 30000 : 0,
+      isFreeship,
       finalAmount,
-      message: `Áp dụng thành công mã ${voucher.code}! Giảm ngay ${fmt(discount)} cho đơn hàng.`,
+      message: isFreeship
+        ? `Áp dụng thành công mã miễn phí vận chuyển "${voucher.code}"!`
+        : `Áp dụng thành công mã "${voucher.code}"! Giảm ${fmt(discount)} cho đơn hàng.`,
     };
   },
 

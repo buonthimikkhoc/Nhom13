@@ -106,25 +106,6 @@ export default function Navbar() {
     router.push("/");
   };
 
-  // Đăng nhập nhanh tài khoản demo
-  const handleQuickLogin = (demoEmail: string, demoName: string, role: string) => {
-    const userObj = {
-      email: demoEmail,
-      fullName: demoName,
-      role,
-    };
-    localStorage.setItem("currentUser", JSON.stringify(userObj));
-    localStorage.setItem("token", `mock_token_${Date.now()}`);
-    setUser(userObj);
-    setShowUserMenu(false);
-
-    if (role === "admin") {
-      alert(`✓ Đã đăng nhập tài khoản Quản trị viên: ${demoEmail}!\nBây giờ bạn có thể truy cập toàn bộ Phân hệ Quản trị Admin.`);
-    } else {
-      alert(`✓ Đã đăng nhập tài khoản Khách hàng: ${demoEmail}!\nTài khoản này sẽ bị chặn 403 Forbidden nếu vào /admin.`);
-    }
-  };
-
   const navLinks = [
     { name: "Linh Kiện", href: "/danh-muc/linh-kien-pc" },
     { name: "AI Workstation", href: "/#workstations" },
@@ -383,53 +364,17 @@ export default function Navbar() {
                     <Link
                       href="/admin/don-hang"
                       onClick={() => setShowUserMenu(false)}
-                      className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition group"
+                      className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition group cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5">
                         <LayoutDashboard className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
                         <div>
                           <span className="block font-black text-xs">Vào Trang Quản Trị (Admin)</span>
-                          <span className="text-[10px] opacity-80 font-normal">Đơn Hàng, Kho, Xe CoolVan &amp; Doanh Thu</span>
+                          <span className="text-[10px] opacity-80 font-normal">Quản lý Đơn hàng, Kho &amp; Doanh thu</span>
                         </div>
                       </div>
                       <ChevronRight className="w-4 h-4 text-white/80 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
-
-                    {/* Quick Admin Links */}
-                    <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px] font-bold">
-                      <Link
-                        href="/admin/don-hang"
-                        onClick={() => setShowUserMenu(false)}
-                        className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-700 border border-slate-200/80 transition flex items-center gap-1.5"
-                      >
-                        <Package className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Đơn Hàng</span>
-                      </Link>
-                      <Link
-                        href="/admin/kho"
-                        onClick={() => setShowUserMenu(false)}
-                        className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-700 border border-slate-200/80 transition flex items-center gap-1.5"
-                      >
-                        <Boxes className="w-3.5 h-3.5 text-cyan-600" />
-                        <span>Kho e-Shield</span>
-                      </Link>
-                      <Link
-                        href="/admin/doanh-thu"
-                        onClick={() => setShowUserMenu(false)}
-                        className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-700 border border-slate-200/80 transition flex items-center gap-1.5"
-                      >
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Doanh Thu</span>
-                      </Link>
-                      <Link
-                        href="/admin/phan-quyen"
-                        onClick={() => setShowUserMenu(false)}
-                        className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-700 border border-slate-200/80 transition flex items-center gap-1.5"
-                      >
-                        <KeyRound className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Phân Quyền</span>
-                      </Link>
-                    </div>
                   </div>
                 )}
 
@@ -472,42 +417,13 @@ export default function Navbar() {
                   </Link>
                 </div>
 
-                {/* 4. Quick Demo Account Switcher (Rất tiện cho việc kiểm thử & chấm bài) */}
-                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                      <UserCheck className="w-3 h-3 text-blue-600" />
-                      ĐĂNG NHẬP NHANH TÀI KHOẢN TEST
-                    </span>
-                    <span className="text-[9px] text-slate-400">1-Click</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                    <button
-                      type="button"
-                      onClick={() => handleQuickLogin("admin1@techcore.vn", "Nguyễn Quốc Anh", "admin")}
-                      className="p-1.5 rounded-xl bg-white hover:bg-blue-50 hover:text-blue-600 text-slate-700 border border-slate-200 font-bold transition flex items-center justify-center gap-1 shadow-xs text-left"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-red-500" />
-                      <span className="truncate">Admin 1</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleQuickLogin("user1@gmail.com", "Nguyễn Văn An", "customer")}
-                      className="p-1.5 rounded-xl bg-white hover:bg-blue-50 hover:text-blue-600 text-slate-700 border border-slate-200 font-bold transition flex items-center justify-center gap-1 shadow-xs text-left"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-slate-400" />
-                      <span className="truncate">User 1 (403)</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* 5. Footer Logout */}
+                {/* 4. Footer Logout */}
                 {user && (
                   <div className="pt-2 border-t border-slate-100">
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-xl transition"
+                      className="w-full flex items-center justify-center gap-1.5 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-xl transition cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Đăng Xuất Tài Khoản</span>

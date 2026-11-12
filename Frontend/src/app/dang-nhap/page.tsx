@@ -39,14 +39,8 @@ export default function LoginPage() {
       setError(null);
       const res = await api.login({ email: email.trim(), password });
       if (res.success) {
-        const userRole = res.data?.user?.role;
-        if (userRole === "admin") {
-          // Tài khoản Admin chuyển hướng vào Trang Quản Trị
-          router.push("/admin");
-        } else {
-          // Tài khoản User chuyển hướng về Trang Chủ
-          router.push("/");
-        }
+        // Đăng nhập thành công chuyển hướng về Trang Chủ (kể cả Admin lẫn Khách hàng)
+        router.push("/");
       } else {
         setError(res.error?.message || "Email hoặc mật khẩu không chính xác.");
       }

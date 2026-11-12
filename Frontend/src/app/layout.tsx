@@ -3,6 +3,7 @@ import "./globals.css";
 import { CartProvider } from "../context/CartContext";
 import { VipToastProvider } from "../components/common/VipToast";
 import AppShell from "../components/layout/AppShell";
+import ExtensionErrorFilter from "../components/common/ExtensionErrorFilter";
 
 export const metadata: Metadata = {
   title: "TechCore - Siêu thị Thiết bị Công nghệ, Laptop Gaming & Linh kiện PC",
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="min-h-screen flex flex-col bg-[#F7FBFD] text-[#001C44] antialiased selection:bg-[#2D99AE] selection:text-white">
+        <ExtensionErrorFilter />
         <CartProvider>
           <VipToastProvider>
             <AppShell>{children}</AppShell>

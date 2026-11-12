@@ -34,6 +34,8 @@ import {
   BookOpen,
   ExternalLink,
   Plus,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { formatVND } from "../lib/utils";
@@ -47,6 +49,7 @@ export default function HomePage() {
   const [vipEmail, setVipEmail] = useState("");
   const [vipSuccess, setVipSuccess] = useState(false);
   const [nonSaleFilter, setNonSaleFilter] = useState<"all" | "hardware" | "apple" | "gear">("all");
+  const [standardVisibleCount, setStandardVisibleCount] = useState<number>(6);
 
   // Tab Giải Pháp Trọn Gói
   const [activeSolutionTab, setActiveSolutionTab] = useState<
@@ -527,6 +530,21 @@ export default function HomePage() {
       };
     });
   }, [catalogProducts]);
+
+  // Đếm số lượng sản phẩm theo từng danh mục
+  const tabCounts = useMemo(() => {
+    return {
+      all: standardProducts.length,
+      hardware: standardProducts.filter((p) => p.category === "hardware").length,
+      apple: standardProducts.filter((p) => p.category === "apple").length,
+      gear: standardProducts.filter((p) => p.category === "gear").length,
+    };
+  }, [standardProducts]);
+
+  // Danh sách sản phẩm tiêu chuẩn sau khi lọc danh mục
+  const filteredStandardProducts = useMemo(() => {
+    return standardProducts.filter((p) => nonSaleFilter === "all" || p.category === nonSaleFilter);
+  }, [standardProducts, nonSaleFilter]);
 
   // Dynamic Flash Deals từ Catalog sản phẩm thực tế
   const flashDeals = useMemo(() => {
@@ -1143,16 +1161,19 @@ export default function HomePage() {
           {/* Filter tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-bold scrollbar-none shrink-0">
             {[
-              { key: "all", label: "Tất Cả (6)" },
-              { key: "hardware", label: "CPU & Card Đồ Họa" },
-              { key: "apple", label: "Apple Chính Hãng" },
-              { key: "gear", label: "Gaming Gear" },
+              { key: "all", label: `Tất Cả (${tabCounts.all})` },
+              { key: "hardware", label: `CPU & Card Đồ Họa (${tabCounts.hardware})` },
+              { key: "apple", label: `Apple Chính Hãng (${tabCounts.apple})` },
+              { key: "gear", label: `Gaming Gear (${tabCounts.gear})` },
             ].map((tab) => (
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setNonSaleFilter(tab.key as any)}
-                className={`px-3.5 py-2 rounded-xl transition whitespace-nowrap ${
+                onClick={() => {
+                  setNonSaleFilter(tab.key as any);
+                  setStandardVisibleCount(6);
+                }}
+                className={`px-3.5 py-2 rounded-xl transition whitespace-nowrap cursor-pointer ${
                   nonSaleFilter === tab.key
                     ? "bg-slate-900 text-white shadow-sm"
                     : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
@@ -1164,10 +1185,10 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 6 Non-Sale Product Cards Grid */}
+        {/* 6 Non-Sale Product Cards Grid (Tự động tải thêm theo nhu cầu) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {standardProducts
-            .filter((p) => nonSaleFilter === "all" || p.category === nonSaleFilter)
+          {filteredStandardProducts
+            .slice(0, standardVisibleCount)
             .map((prod) => (
               <div
                 key={prod.id}
@@ -1228,7 +1249,7 @@ export default function HomePage() {
                     type="button"
                     onClick={() => handleAddToCart(prod.variantId)}
                     disabled={addingId === prod.variantId}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
                     title="Thêm vào giỏ hàng"
                   >
                     <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
@@ -1239,7 +1260,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => handleBuyNow(prod.variantId)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-sm shadow-blue-500/25 active:scale-95"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-sm shadow-blue-500/25 active:scale-95 cursor-pointer"
                     title="Mua ngay"
                   >
                     <Zap className="w-3.5 h-3.5 fill-white" />
@@ -1248,6 +1269,39 @@ export default function HomePage() {
                 </div>
               </div>
             ))}
+        </div>
+
+        {/* Nút Xem Thêm / Thu Gọn / Khám Phá Toàn Bộ */}
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+          {standardVisibleCount < filteredStandardProducts.length && (
+            <button
+              type="button"
+              onClick={() => setStandardVisibleCount((prev) => prev + 6)}
+              className="px-6 py-3 rounded-2xl bg-white hover:bg-blue-50 text-blue-600 font-bold text-xs border border-blue-200 shadow-xs hover:shadow-md transition flex items-center gap-2 active:scale-95 cursor-pointer"
+            >
+              <span>Xem Thêm (+6 Sản Phẩm)</span>
+              <ChevronDown className="w-4 h-4 text-blue-600" />
+            </button>
+          )}
+
+          {standardVisibleCount > 6 && (
+            <button
+              type="button"
+              onClick={() => setStandardVisibleCount(6)}
+              className="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200 transition flex items-center gap-2 active:scale-95 cursor-pointer"
+            >
+              <span>Thu Gọn</span>
+              <ChevronUp className="w-4 h-4 text-slate-500" />
+            </button>
+          )}
+
+          <Link
+            href="/danh-muc/tat-ca"
+            className="px-6 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md shadow-slate-900/10 transition flex items-center gap-2 active:scale-95"
+          >
+            <span>Khám Phá Toàn Bộ Kho ({tabCounts.all} Sản Phẩm)</span>
+            <ArrowRight className="w-4 h-4 text-white" />
+          </Link>
         </div>
       </section>
 

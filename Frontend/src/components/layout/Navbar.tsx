@@ -44,6 +44,23 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  // Hiệu ứng giỏ hàng nảy lên khi sản phẩm bay vào
+  const [isCartBumping, setIsCartBumping] = useState(false);
+
+  useEffect(() => {
+    const handleBump = () => {
+      setIsCartBumping(true);
+      setTimeout(() => {
+        setIsCartBumping(false);
+      }, 700);
+    };
+
+    window.addEventListener("techcore:cart-bump", handleBump);
+    return () => {
+      window.removeEventListener("techcore:cart-bump", handleBump);
+    };
+  }, []);
+
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
     const token = localStorage.getItem("token");
@@ -231,15 +248,34 @@ export default function Navbar() {
             <span className="hidden xl:inline">Tra cứu BH</span>
           </Link>
 
-          {/* Cart Icon with badge */}
+          {/* Cart Icon with badge & nảy giỏ hàng khi sản phẩm bay tới */}
           <Link
             href="/gio-hang"
-            className="relative p-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-slate-100 transition"
+            id="navbar-cart-btn"
+            data-cart-icon="true"
+            className={`relative p-2 rounded-xl transition-all duration-300 ${
+              isCartBumping
+                ? "text-blue-600 scale-125 -rotate-12 bg-blue-50 ring-4 ring-[#2D99AE]/40 shadow-lg shadow-[#0C5776]/20"
+                : "text-slate-700 hover:text-blue-600 hover:bg-slate-100"
+            }`}
             title="Giỏ hàng"
           >
-            <ShoppingCart className="w-5 h-5" />
+            {isCartBumping && (
+              <span className="absolute inset-0 rounded-xl bg-[#2D99AE]/30 animate-ping pointer-events-none" />
+            )}
+            <ShoppingCart
+              className={`w-5 h-5 transition-transform duration-300 ${
+                isCartBumping ? "scale-110 stroke-[2.5]" : ""
+              }`}
+            />
             {itemCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-blue-600 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white shadow-sm">
+              <span
+                className={`absolute -top-1 -right-1 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white shadow-sm transition-all duration-300 ${
+                  isCartBumping
+                    ? "scale-125 bg-emerald-500 shadow-md shadow-emerald-500/40"
+                    : "bg-blue-600"
+                }`}
+              >
                 {itemCount}
               </span>
             )}

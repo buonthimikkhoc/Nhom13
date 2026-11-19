@@ -3,17 +3,21 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { Cart } from "../types";
+import FlyingCartOverlay, { emitFlyToCart, FlyToCartOptions } from "../components/cart/FlyingCartOverlay";
+
+export type { FlyToCartOptions };
 
 interface CartContextType {
   cart: Cart | null;
   loading: boolean;
   itemCount: number;
   totalAmount: number;
-  addToCart: (variantId: string, quantity?: number) => Promise<void>;
+  addToCart: (variantId: string, quantity?: number, flyOptions?: FlyToCartOptions) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
+  flyToCart: (options: FlyToCartOptions) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -40,7 +44,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     refreshCart();
   }, []);
 
-  const addToCart = async (variantId: string, quantity: number = 1) => {
+  const flyToCart = (options: FlyToCartOptions) => {
+    emitFlyToCart(options);
+  };
+
+  const addToCart = async (
+    variantId: string,
+    quantity: number = 1,
+    flyOptions?: FlyToCartOptions
+  ) => {
+    // Kích hoạt hiệu ứng bay vòng cung vào giỏ hàng ngay lập tức khi người dùng click
+    if (flyOptions) {
+      emitFlyToCart(flyOptions);
+    }
+
     try {
       const res = await api.addToCart(variantId, quantity);
       if (res.success) {
@@ -104,8 +121,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         removeItem,
         clearCart,
         refreshCart,
+        flyToCart,
       }}
     >
+      <FlyingCartOverlay />
       {children}
     </CartContext.Provider>
   );

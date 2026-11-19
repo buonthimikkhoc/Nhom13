@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Link from "next/link";
 import { ShoppingCart, Star, Shield, Cpu } from "lucide-react";
 import { Product } from "../../types";
@@ -13,6 +13,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
+  const imgRef = useRef<HTMLImageElement>(null);
   const defaultVariant = product.variants?.[0];
   const price = defaultVariant?.price || 0;
   const compareAtPrice = defaultVariant?.compareAtPrice;
@@ -30,18 +31,23 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   }
 
-  const handleQuickAdd = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (defaultVariant) {
-      addToCart(defaultVariant.id, 1);
-    }
-  };
-
   const thumbnail =
     product.images?.find((img) => img.isThumbnail)?.url ||
     product.images?.[0]?.url ||
     "https://bizweb.dktcdn.net/thumb/grande/100/329/122/products/laptop-asus-expertbook-p1-p1403cva-c5h16-63ws-01.jpg";
+
+  const handleQuickAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (defaultVariant) {
+      // Bắt đầu bay trực tiếp từ vị trí của HÌNH ẢNH SẢN PHẨM trên thẻ
+      addToCart(defaultVariant.id, 1, {
+        startElement: imgRef.current,
+        event: e,
+        imageUrl: thumbnail,
+      });
+    }
+  };
 
   return (
     <div className="group bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden relative">
@@ -61,6 +67,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Product Image */}
       <Link href={`/san-pham/${product.slug}`} scroll={true} className="block relative pt-[75%] overflow-hidden bg-slate-50">
         <img
+          ref={imgRef}
           src={thumbnail}
           alt={product.name}
           referrerPolicy="no-referrer"

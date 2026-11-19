@@ -6,8 +6,8 @@ import AppShell from "../components/layout/AppShell";
 import ExtensionErrorFilter from "../components/common/ExtensionErrorFilter";
 
 export const metadata: Metadata = {
-  title: "TechCore - Siêu thị Thiết bị Công nghệ, Laptop Gaming & Linh kiện PC",
-  description: "Hệ thống bán lẻ thiết bị công nghệ hàng đầu Việt Nam. Laptop Gaming, Macbook, iPhone, Card màn hình RTX, Bàn phím cơ chính hãng 100%.",
+  title: "Shop Công Nghệ TechCore - Laptop Gaming, PC & Linh Kiện Chính Hãng",
+  description: "Shop Công Nghệ TechCore - Hệ thống bán lẻ thiết bị công nghệ hàng đầu Việt Nam. Laptop Gaming, Macbook, iPhone, Card màn hình RTX, Bàn phím cơ chính hãng 100%.",
 };
 
 export default function RootLayout({

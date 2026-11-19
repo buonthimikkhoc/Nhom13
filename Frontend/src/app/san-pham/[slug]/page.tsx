@@ -97,8 +97,17 @@ export default function ProductDetailPage() {
     } catch (e) {}
   }
 
-  const handleAddToCart = () => {
-    addToCart(selectedVariant.id, quantity);
+  const handleAddToCart = (e?: React.MouseEvent) => {
+    const mainImg =
+      selectedImage ||
+      product.images?.[0]?.url ||
+      "https://bizweb.dktcdn.net/thumb/grande/100/329/122/products/laptop-asus-expertbook-p1-p1403cva-c5h16-63ws-01.jpg";
+    const mainImgEl = document.getElementById("main-product-image") as HTMLImageElement | null;
+    addToCart(selectedVariant.id, quantity, {
+      startElement: mainImgEl,
+      event: e,
+      imageUrl: mainImg,
+    });
   };
 
   const handleBuyNow = () => {
@@ -125,6 +134,7 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           <div className="relative pt-[80%] rounded-2xl bg-slate-50 border overflow-hidden">
             <img
+              id="main-product-image"
               src={selectedImage || "https://bizweb.dktcdn.net/thumb/grande/100/329/122/products/laptop-asus-expertbook-p1-p1403cva-c5h16-63ws-01.jpg"}
               alt={product.name}
               referrerPolicy="no-referrer"

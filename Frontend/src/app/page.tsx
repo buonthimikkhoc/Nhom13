@@ -99,11 +99,15 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Thêm vào giỏ hàng (ở lại trang hiện tại, tăng số lượng trên giỏ hàng & bắn Toast)
-  const handleAddToCart = async (variantId: string, name?: string) => {
+  // Thêm vào giỏ hàng (ở lại trang hiện tại, tăng số lượng trên giỏ hàng, bay vòng cung & bắn Toast)
+  const handleAddToCart = async (
+    variantId: string,
+    name?: string,
+    options?: { event?: React.MouseEvent; imageUrl?: string }
+  ) => {
     try {
       setAddingId(variantId);
-      await addToCart(variantId, 1);
+      await addToCart(variantId, 1, options);
       setAddedId(variantId);
       showToast("Đã thêm vào giỏ hàng!", "Sản phẩm đã được đồng bộ vào giỏ hàng thành công.", name);
       setTimeout(() => setAddedId(null), 2000);
@@ -1116,7 +1120,12 @@ export default function HomePage() {
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => handleAddToCart(deal.variantId)}
+                    onClick={(e) =>
+                      handleAddToCart(deal.variantId, deal.title, {
+                        event: e,
+                        imageUrl: deal.image,
+                      })
+                    }
                     disabled={addingId === deal.variantId}
                     className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
                     title="Thêm vào giỏ hàng"
@@ -1247,7 +1256,12 @@ export default function HomePage() {
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
                   <button
                     type="button"
-                    onClick={() => handleAddToCart(prod.variantId)}
+                    onClick={(e) =>
+                      handleAddToCart(prod.variantId, prod.name, {
+                        event: e,
+                        imageUrl: prod.image,
+                      })
+                    }
                     disabled={addingId === prod.variantId}
                     className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
                     title="Thêm vào giỏ hàng"
@@ -1485,7 +1499,12 @@ export default function HomePage() {
 
                   <button
                     type="button"
-                    onClick={() => handleAddToCart(currentPackage.variantId, currentPackage.title)}
+                    onClick={(e) =>
+                      handleAddToCart(currentPackage.variantId, currentPackage.title, {
+                        event: e,
+                        imageUrl: currentPackage.image,
+                      })
+                    }
                     disabled={addingId === currentPackage.variantId}
                     className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold text-xs sm:text-sm px-4 py-3 rounded-2xl transition active:scale-95 flex items-center gap-1.5"
                   >
@@ -2229,8 +2248,12 @@ export default function HomePage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => {
-                      handleAddToCart(selectedArticle.relatedVariantId, selectedArticle.relatedProductName);
+                    onClick={(e) => {
+                      handleAddToCart(
+                        selectedArticle.relatedVariantId,
+                        selectedArticle.relatedProductName,
+                        { event: e, imageUrl: selectedArticle.image }
+                      );
                     }}
                     className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center gap-1.5 transition shadow-sm"
                   >

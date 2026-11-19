@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Trash2, ArrowRight, ShieldCheck, ShoppingBag, ArrowLeft, Tag, CheckCircle2, AlertCircle } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { formatVND } from "../../lib/utils";
 import { api } from "../../lib/api";
 
 export default function CartPage() {
+  const router = useRouter();
   const { cart, updateQuantity, removeItem, totalAmount, itemCount } = useCart();
 
   // State xác nhận xóa sản phẩm khỏi giỏ hàng
@@ -417,16 +419,26 @@ export default function CartPage() {
               <span className="text-2xl font-black text-red-600">{formatVND(grandTotal)}</span>
             </div>
 
-            <Link
-              href={
-                appliedVouchers.length > 0
-                  ? `/thanh-toan?vouchers=${encodeURIComponent(appliedVouchers.map((v) => v.code).join(","))}`
-                  : "/thanh-toan"
-              }
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm py-4 rounded-2xl transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2"
+            <button
+              type="button"
+              onClick={() => {
+                const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+                const checkoutUrl =
+                  appliedVouchers.length > 0
+                    ? `/thanh-toan?vouchers=${encodeURIComponent(appliedVouchers.map((v) => v.code).join(","))}`
+                    : "/thanh-toan";
+
+                if (!token) {
+                  router.push(`/dang-nhap?redirect=${encodeURIComponent(checkoutUrl)}`);
+                } else {
+                  router.push(checkoutUrl);
+                }
+              }}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm py-4 rounded-2xl transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
-              Tiến hành đặt hàng <ArrowRight className="w-4 h-4" />
-            </Link>
+              <span>Tiến hành đặt hàng</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
 
             <div className="text-[11px] text-slate-400 text-center flex items-center justify-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Thanh toán an toàn & bảo mật 100%

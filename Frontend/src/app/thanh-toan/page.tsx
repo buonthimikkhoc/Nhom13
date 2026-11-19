@@ -39,6 +39,30 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<any | null>(null);
 
+  // Trạng thái kiểm tra đăng nhập bắt buộc trước khi thanh toán
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("currentUser");
+      if (token && storedUser) {
+        setIsAuthenticated(true);
+        try {
+          const userObj = JSON.parse(storedUser);
+          setFormData((prev) => ({
+            ...prev,
+            receiverName: userObj.fullName || prev.receiverName,
+            guestEmail: userObj.email || prev.guestEmail,
+            phone: userObj.phone || prev.phone,
+          }));
+        } catch (e) {}
+      } else {
+        setIsAuthenticated(false);
+      }
+    }
+  }, []);
+
   // Voucher states (hỗ trợ nhiều mã không trùng lặp)
   interface AppliedVoucherItem {
     code: string;
@@ -186,6 +210,13 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (!cart || cart.items.length === 0) return;
 
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      alert("Vui lòng đăng nhập tài khoản trước khi hoàn tất đặt hàng.");
+      router.push("/dang-nhap?redirect=/thanh-toan");
+      return;
+    }
+
     try {
       setLoading(true);
       const payload = {
@@ -296,6 +327,85 @@ export default function CheckoutPage() {
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             Tra cứu bảo hành
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Đang kiểm tra phiên đăng nhập
+  if (isAuthenticated === null) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-24 text-center space-y-4">
+        <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs font-semibold text-slate-500">Đang xác thực phiên đăng nhập...</p>
+      </div>
+    );
+  }
+
+  // YÊU CẦU ĐĂNG NHẬP: Người dùng chưa đăng nhập thì KHÔNG THỂ thanh toán
+  if (isAuthenticated === false) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16 text-center animate-in fade-in zoom-in-95 duration-200">
+        <div className="bg-white p-6 sm:p-10 rounded-3xl border border-slate-200/90 shadow-xl space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#0C5776] via-[#2D99AE] to-[#BCFEFE] text-white flex items-center justify-center mx-auto shadow-lg shadow-[#0C5776]/25">
+            <ShieldCheck className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full uppercase tracking-wider inline-block">
+              YÊU CẦU XÁC THỰC TÀI KHOẢN
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Vui Lòng Đăng Nhập Để Thanh Toán
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+              Để bảo vệ quyền lợi bảo hành chính hãng e-Shield 1-đổi-1, tra cứu tiến độ đơn hàng thời gian thực và áp dụng mã voucher ưu đãi, TechCore yêu cầu quý khách đăng nhập tài khoản trước khi hoàn tất thanh toán.
+            </p>
+          </div>
+
+          {/* Quyền lợi khi đăng nhập */}
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left space-y-2.5 text-xs text-slate-700">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Kích hoạt mã bảo hành điện tử chính hãng tự động theo tài khoản</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Tra cứu lộ trình đơn hàng thời gian thực và quản lý hóa đơn mua sắm</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Áp dụng mã Voucher giảm giá độc quyền và tích điểm TechPoints</span>
+            </div>
+          </div>
+
+          {/* Các nút hành động */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <Link
+              href="/dang-nhap?redirect=/thanh-toan"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm py-3.5 px-4 rounded-2xl transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 active:scale-95"
+            >
+              <span>Đăng Nhập Ngay</span>
+              <ArrowLeft className="w-4 h-4 rotate-180" />
+            </Link>
+
+            <Link
+              href="/dang-ky?redirect=/thanh-toan"
+              className="w-full bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm py-3.5 px-4 rounded-2xl border border-slate-300 transition shadow-xs flex items-center justify-center gap-2 active:scale-95"
+            >
+              <span>Đăng Ký Tài Khoản Mới</span>
+            </Link>
+          </div>
+
+          <div className="pt-2">
+            <Link
+              href="/gio-hang"
+              className="text-xs font-bold text-slate-500 hover:text-blue-600 transition inline-flex items-center gap-1.5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Quay lại giỏ hàng</span>
+            </Link>
+          </div>
         </div>
       </div>
     );

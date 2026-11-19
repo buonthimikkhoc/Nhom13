@@ -118,12 +118,17 @@ export default function HomePage() {
     }
   };
 
-  // Mua ngay (thêm vào giỏ và chuyển thẳng sang trang thanh toán)
+  // Mua ngay (thêm vào giỏ và chuyển thẳng sang trang thanh toán nếu đã đăng nhập, ngược lại chuyển sang đăng nhập)
   const handleBuyNow = async (variantId: string) => {
     try {
       setAddingId(variantId);
       await addToCart(variantId, 1);
-      router.push("/thanh-toan");
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      if (!token) {
+        router.push("/dang-nhap?redirect=/thanh-toan");
+      } else {
+        router.push("/thanh-toan");
+      }
     } catch (e) {
       console.error(e);
     } finally {

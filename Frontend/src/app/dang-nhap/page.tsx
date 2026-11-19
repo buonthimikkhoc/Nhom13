@@ -39,8 +39,15 @@ export default function LoginPage() {
       setError(null);
       const res = await api.login({ email: email.trim(), password });
       if (res.success) {
-        // Đăng nhập thành công chuyển hướng về Trang Chủ (kể cả Admin lẫn Khách hàng)
-        router.push("/");
+        let redirectTarget = "/";
+        if (typeof window !== "undefined") {
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectParam = urlParams.get("redirect");
+          if (redirectParam && redirectParam.startsWith("/")) {
+            redirectTarget = redirectParam;
+          }
+        }
+        router.push(redirectTarget);
       } else {
         setError(res.error?.message || "Email hoặc mật khẩu không chính xác.");
       }

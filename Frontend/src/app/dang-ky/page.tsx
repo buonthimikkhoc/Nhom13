@@ -60,7 +60,15 @@ export default function RegisterPage() {
       if (res.success) {
         setSuccess(true);
         setTimeout(() => {
-          router.push("/dang-nhap");
+          let loginTarget = "/dang-nhap";
+          if (typeof window !== "undefined") {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectParam = urlParams.get("redirect");
+            if (redirectParam && redirectParam.startsWith("/")) {
+              loginTarget = `/dang-nhap?redirect=${encodeURIComponent(redirectParam)}`;
+            }
+          }
+          router.push(loginTarget);
         }, 1500);
       } else {
         setError(res.error?.message || "Đăng ký không thành công.");

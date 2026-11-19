@@ -112,7 +112,12 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = () => {
     addToCart(selectedVariant.id, quantity);
-    router.push("/thanh-toan");
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      router.push("/dang-nhap?redirect=/thanh-toan");
+    } else {
+      router.push("/thanh-toan");
+    }
   };
 
   return (

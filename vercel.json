@@ -1,7 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "name": "shopcongnghe-techcore",
-  "framework": "nextjs",
-  "buildCommand": "npm run build --prefix Frontend",
-  "outputDirectory": "Frontend/.next"
-}

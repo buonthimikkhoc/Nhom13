@@ -7,10 +7,12 @@ import { Trash2, ArrowRight, ShieldCheck, ShoppingBag, ArrowLeft, Tag, CheckCirc
 import { useCart } from "../../context/CartContext";
 import { formatVND } from "../../lib/utils";
 import { api } from "../../lib/api";
+import LoginPromptModal from "../../components/common/LoginPromptModal";
 
 export default function CartPage() {
   const router = useRouter();
   const { cart, updateQuantity, removeItem, totalAmount, itemCount } = useCart();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // State xác nhận xóa sản phẩm khỏi giỏ hàng
   const [itemToDelete, setItemToDelete] = useState<{
@@ -429,7 +431,8 @@ export default function CartPage() {
                     : "/thanh-toan";
 
                 if (!token) {
-                  router.push(`/dang-nhap?redirect=${encodeURIComponent(checkoutUrl)}`);
+                  // KHÔNG ép buộc chuyển trang! Mở popup hỏi ý kiến người dùng trước:
+                  setShowLoginModal(true);
                 } else {
                   router.push(checkoutUrl);
                 }
@@ -498,6 +501,19 @@ export default function CartPage() {
           </div>
         </div>
       )}
+
+      {/* Modal Hỏi Ý Kiến Người Dùng Trước Khi Đăng Nhập Thanh Toán */}
+      <LoginPromptModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        redirectUrl={
+          appliedVouchers.length > 0
+            ? `/thanh-toan?vouchers=${encodeURIComponent(appliedVouchers.map((v) => v.code).join(","))}`
+            : "/thanh-toan"
+        }
+        title="Đăng Nhập Để Thanh Toán Giỏ Hàng"
+        message="Bạn cần đăng nhập tài khoản TechCore để tiếp tục thanh toán đơn hàng. Bạn có muốn chuyển đến trang đăng nhập ngay không?"
+      />
 
       {/* Toast thông báo sau khi xóa thành công */}
       {deleteToast && (

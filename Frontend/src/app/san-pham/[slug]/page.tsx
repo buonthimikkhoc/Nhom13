@@ -21,6 +21,7 @@ import { formatVND } from "../../../lib/utils";
 import { useCart } from "../../../context/CartContext";
 import ProductCard from "../../../components/product/ProductCard";
 import ProductReviewsSection from "../../../components/product/ProductReviewsSection";
+import LoginPromptModal from "../../../components/common/LoginPromptModal";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -33,6 +34,7 @@ export default function ProductDetailPage() {
   const [selectedImage, setSelectedImage] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Đảm bảo khi bấm vào xem chi tiết sản phẩm, luôn luôn hiển thị phần trên cùng trước
   useEffect(() => {
@@ -114,7 +116,8 @@ export default function ProductDetailPage() {
     addToCart(selectedVariant.id, quantity);
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!token) {
-      router.push("/dang-nhap?redirect=/thanh-toan");
+      // Hỏi người dùng trước, không tự ý chuyển hướng ép buộc
+      setShowLoginModal(true);
     } else {
       router.push("/thanh-toan");
     }
@@ -350,6 +353,15 @@ export default function ProductDetailPage() {
           </div>
         </section>
       )}
+
+      {/* Modal Hỏi Ý Kiến Người Dùng Trước Khi Đăng Nhập Thanh Toán */}
+      <LoginPromptModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        redirectUrl="/thanh-toan"
+        title="Đăng Nhập Để Mua Ngay Sản Phẩm"
+        message={`Bạn cần đăng nhập tài khoản TechCore để tiến hành mua ngay "${product.name}". Bạn có muốn chuyển đến trang đăng nhập ngay không?`}
+      />
     </div>
   );
 }

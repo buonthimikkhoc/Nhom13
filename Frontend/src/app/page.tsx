@@ -40,10 +40,12 @@ import {
 import { useCart } from "../context/CartContext";
 import { formatVND } from "../lib/utils";
 import { api } from "../lib/api";
+import LoginPromptModal from "../components/common/LoginPromptModal";
 
 export default function HomePage() {
   const router = useRouter();
   const { addToCart } = useCart();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [vipEmail, setVipEmail] = useState("");
@@ -118,14 +120,15 @@ export default function HomePage() {
     }
   };
 
-  // Mua ngay (thêm vào giỏ và chuyển thẳng sang trang thanh toán nếu đã đăng nhập, ngược lại chuyển sang đăng nhập)
+  // Mua ngay (thêm vào giỏ và hỏi người dùng đăng nhập nếu chưa có tài khoản)
   const handleBuyNow = async (variantId: string) => {
     try {
       setAddingId(variantId);
       await addToCart(variantId, 1);
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
       if (!token) {
-        router.push("/dang-nhap?redirect=/thanh-toan");
+        // Hỏi ý kiến người dùng trước, nếu không thanh toán nữa thì ở lại trang chủ bình thường
+        setShowLoginModal(true);
       } else {
         router.push("/thanh-toan");
       }
@@ -2308,6 +2311,15 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Modal Hỏi Ý Kiến Người Dùng Trước Khi Đăng Nhập Thanh Toán */}
+      <LoginPromptModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        redirectUrl="/thanh-toan"
+        title="Đăng Nhập Để Thanh Toán Đơn Hàng"
+        message="Bạn cần đăng nhập tài khoản TechCore để tiến hành thanh toán đơn hàng. Bạn có muốn chuyển đến trang đăng nhập ngay không?"
+      />
     </div>
   );
 }

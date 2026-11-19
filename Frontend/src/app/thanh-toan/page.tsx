@@ -397,13 +397,19 @@ export default function CheckoutPage() {
             </Link>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/gio-hang"
-              className="text-xs font-bold text-slate-500 hover:text-blue-600 transition inline-flex items-center gap-1.5"
+              className="py-2.5 px-5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition inline-flex items-center gap-2"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Quay lại giỏ hàng</span>
+              <span>Không thanh toán nữa, quay lại giỏ hàng</span>
+            </Link>
+            <Link
+              href="/"
+              className="py-2.5 px-5 rounded-xl text-xs font-bold text-slate-500 hover:text-blue-600 transition inline-flex items-center gap-2"
+            >
+              <span>Về trang chủ</span>
             </Link>
           </div>
         </div>

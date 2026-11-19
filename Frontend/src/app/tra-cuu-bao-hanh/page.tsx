@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { api } from "../../lib/api";
 
-export default function WarrantyLookupPage() {
+function WarrantyLookupContent() {
   const searchParams = useSearchParams();
   const querySerial = searchParams.get("serial") || searchParams.get("sn") || "";
 
@@ -234,5 +234,20 @@ export default function WarrantyLookupPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function WarrantyLookupPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 p-12 text-center flex flex-col items-center justify-center space-y-3">
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-500 font-semibold">Đang tải tra cứu bảo hành...</p>
+        </div>
+      }
+    >
+      <WarrantyLookupContent />
+    </React.Suspense>
   );
 }

@@ -68,7 +68,7 @@ interface Order {
   cancelReason?: string;
 }
 
-export default function DonHangPage() {
+function DonHangContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightCode = searchParams.get("code") || "";
@@ -896,5 +896,20 @@ export default function DonHangPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function DonHangPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50/60 p-12 text-center flex flex-col items-center justify-center space-y-3">
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-500 font-semibold">Đang tải lịch sử đơn hàng...</p>
+        </div>
+      }
+    >
+      <DonHangContent />
+    </React.Suspense>
   );
 }

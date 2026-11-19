@@ -7,7 +7,7 @@ import { api } from "../../../lib/api";
 import { Product, Brand, Category } from "../../../types";
 import ProductCard from "../../../components/product/ProductCard";
 
-export default function CategoryPage() {
+function CategoryContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const categorySlug = params.slug === "tat-ca" ? undefined : (params.slug as string);
@@ -308,6 +308,21 @@ export default function CategoryPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CategoryPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="min-h-screen p-12 text-center flex flex-col items-center justify-center space-y-3">
+          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-500 font-semibold">Đang tải danh mục sản phẩm...</p>
+        </div>
+      }
+    >
+      <CategoryContent />
+    </React.Suspense>
   );
 }
 

@@ -20,6 +20,11 @@
     "build:api": "npm --workspace=Backend run build",
     "build:web": "npm --workspace=Frontend run build"
   },
+  "dependencies": {
+    "next": "^14.2.20",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }

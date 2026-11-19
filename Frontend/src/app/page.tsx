@@ -667,24 +667,24 @@ export default function HomePage() {
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-3xl sm:text-5xl xl:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
+              <h1 className="text-2xl sm:text-5xl xl:text-6xl font-black text-slate-900 tracking-tight leading-[1.15]">
                 Kiến Tạo Kỷ Nguyên <br />
                 <span className="text-blue-600">Điện Toán AI</span> &amp; Phần Cứng <br />
                 Siêu Hiệu Năng
               </h1>
 
               {/* Subtitle */}
-              <p className="text-sm sm:text-base text-slate-600 max-w-2xl leading-relaxed">
+              <p className="text-xs sm:text-base text-slate-600 max-w-2xl leading-relaxed">
                 Hệ sinh thái phân phối chính hãng giải pháp máy chủ AI, Workstation chuyên nghiệp,
                 linh kiện cao cấp và laptop gaming thế hệ mới nhất. Độc quyền bảo hành 1-đổi-1 trong
                 30 ngày.
               </p>
 
               {/* CTA Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                 <Link
                   href="#workstations"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm px-6 py-3.5 rounded-2xl transition shadow-lg shadow-blue-500/25 flex items-center gap-2 active:scale-95"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-2xl transition shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 active:scale-95 text-center"
                 >
                   <span>Khám Phá AI Workstation 2026</span>
                   <ArrowRight className="w-4 h-4" />
@@ -693,7 +693,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setIsBuilderOpen(true)}
-                  className="bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm px-6 py-3.5 rounded-2xl border border-slate-300 transition shadow-xs flex items-center gap-2 active:scale-95 cursor-pointer"
+                  className="bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs sm:text-sm px-6 py-3.5 rounded-2xl border border-slate-300 transition shadow-xs flex items-center justify-center gap-2 active:scale-95 cursor-pointer text-center"
                 >
                   <Settings className="w-4 h-4 text-blue-600 animate-spin-slow" />
                   <span>Xây Dựng Cấu Hình PC 3D</span>
@@ -701,25 +701,25 @@ export default function HomePage() {
               </div>
 
               {/* 3 Metric Stats */}
-              <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-100 max-w-lg">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-6 border-t border-slate-100 max-w-lg">
                 <div>
-                  <div className="text-2xl sm:text-3xl font-black text-blue-600">100%</div>
-                  <div className="text-xs text-slate-500 font-medium">Nhập khẩu chính ngạch</div>
+                  <div className="text-xl sm:text-3xl font-black text-blue-600">100%</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 font-medium">Nhập khẩu chính ngạch</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-black text-slate-900">15 Phút</div>
-                  <div className="text-xs text-slate-500 font-medium">Đổi mới tại Showroom</div>
+                  <div className="text-xl sm:text-3xl font-black text-slate-900">15 Phút</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 font-medium">Đổi mới tại Showroom</div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl font-black text-slate-900">2 Giờ</div>
-                  <div className="text-xs text-slate-500 font-medium">Giao hỏa tốc nội thành</div>
+                  <div className="text-xl sm:text-3xl font-black text-slate-900">2 Giờ</div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 font-medium">Giao hỏa tốc nội thành</div>
                 </div>
               </div>
             </div>
 
             {/* Right Column: Hero High-Tech Card (NeuralForge Apex Titan v5) */}
             <div className="lg:col-span-5">
-              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 border border-slate-800 p-6 text-white shadow-2xl group">
+              <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 border border-slate-800 p-4 sm:p-6 text-white shadow-2xl group">
                 {/* Ambient glow effect */}
                 <div className="absolute -top-20 -right-20 w-60 h-60 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -863,11 +863,11 @@ export default function HomePage() {
         </div>
 
         {/* 6 Category Solution Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
           {/* Card 1 */}
           <Link
             href="/danh-muc/linh-kien-pc"
-            className="group p-6 bg-white rounded-3xl border border-slate-200/80 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-500/5 transition-all flex flex-col justify-between"
+            className="group p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 hover:border-blue-400 hover:shadow-xl hover:shadow-blue-500/5 transition-all flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -1069,20 +1069,20 @@ export default function HomePage() {
           </div>
 
           {/* 4 Flash Deal Product Cards (Dynamic từ Catalog sản phẩm) */}
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="p-3 sm:p-6 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-5">
             {flashDeals.map((deal, idx) => (
               <div
                 key={deal.variantId || idx}
-                className="p-4 rounded-2xl border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between relative group"
+                className="p-3 sm:p-4 rounded-2xl border border-slate-200/80 hover:border-blue-400 hover:shadow-lg transition flex flex-col justify-between relative group"
               >
-                <span className={`absolute top-3 left-3 ${deal.badgeColor} text-white text-[10px] font-black px-2 py-1 rounded-md z-10`}>
+                <span className={`absolute top-2.5 left-2.5 ${deal.badgeColor} text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 sm:py-1 rounded-md z-10`}>
                   {deal.discountBadge}
                 </span>
                 <div>
                   <Link
                     href={`/san-pham/${deal.slug}`}
                     scroll={true}
-                    className="block w-full h-44 rounded-xl overflow-hidden bg-slate-50 mb-3 cursor-pointer group/item"
+                    className="block w-full h-32 sm:h-44 rounded-xl overflow-hidden bg-slate-50 mb-2.5 sm:mb-3 cursor-pointer group/item"
                   >
                     <img
                       src={deal.image}
@@ -1091,33 +1091,33 @@ export default function HomePage() {
                     />
                   </Link>
                   <Link href={`/san-pham/${deal.slug}`} scroll={true}>
-                    <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mb-1 hover:text-blue-600 transition">
+                    <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mb-1 hover:text-blue-600 transition leading-snug">
                       {deal.title}
                     </h4>
                   </Link>
-                  <p className="text-[11px] text-slate-400 mb-2">{deal.subtitle}</p>
-                  <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-base font-black text-blue-600">{formatVND(deal.price)}</span>
+                  <p className="text-[10px] sm:text-[11px] text-slate-400 mb-1.5 sm:mb-2 truncate">{deal.subtitle}</p>
+                  <div className="flex flex-wrap items-baseline gap-1.5 mb-2 sm:mb-3">
+                    <span className="text-sm sm:text-base font-black text-blue-600">{formatVND(deal.price)}</span>
                     {deal.comparePrice > deal.price && (
-                      <span className="text-xs text-slate-400 line-through">{formatVND(deal.comparePrice)}</span>
+                      <span className="text-[10px] sm:text-xs text-slate-400 line-through">{formatVND(deal.comparePrice)}</span>
                     )}
                   </div>
                   {/* Progress bar */}
                   <div className="w-full bg-slate-100 rounded-full h-1.5 mb-1 overflow-hidden">
                     <div className={`bg-blue-600 h-1.5 rounded-full ${deal.progress}`} />
                   </div>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] text-red-500 font-bold">{deal.alertText}</p>
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <p className="text-[9px] sm:text-[10px] text-red-500 font-bold">{deal.alertText}</p>
                     <Link
                       href={`/san-pham/${deal.slug}`}
                       scroll={true}
-                      className="text-[10px] text-blue-600 hover:underline font-bold"
+                      className="text-[9px] sm:text-[10px] text-blue-600 hover:underline font-bold"
                     >
                       Chi tiết &rarr;
                     </Link>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 pt-1">
                   <button
                     type="button"
                     onClick={(e) =>
@@ -1127,19 +1127,19 @@ export default function HomePage() {
                       })
                     }
                     disabled={addingId === deal.variantId}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2 sm:py-2.5 px-2 rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer"
                     title="Thêm vào giỏ hàng"
                   >
-                    <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
+                    <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600" />
                     <span className="truncate">{addedId === deal.variantId ? "Đã thêm ✓" : "+ Giỏ hàng"}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleBuyNow(deal.variantId)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-xs shadow-blue-500/25 active:scale-95"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2 sm:py-2.5 px-2 rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1 transition shadow-xs shadow-blue-500/25 active:scale-95 cursor-pointer"
                     title="Mua ngay"
                   >
-                    <Zap className="w-3.5 h-3.5 fill-white" />
+                    <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-white" />
                     <span>Mua Ngay</span>
                   </button>
                 </div>
@@ -1195,22 +1195,22 @@ export default function HomePage() {
         </div>
 
         {/* 6 Non-Sale Product Cards Grid (Tự động tải thêm theo nhu cầu) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {filteredStandardProducts
             .slice(0, standardVisibleCount)
             .map((prod) => (
               <div
                 key={prod.id}
-                className="bg-white rounded-3xl border border-slate-200/90 hover:border-blue-400 hover:shadow-xl transition-all p-5 flex flex-col justify-between group"
+                className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-blue-400 hover:shadow-xl transition-all p-3 sm:p-5 flex flex-col justify-between group"
               >
                 <div>
                   {/* Top Badges (Non-Sale: No -% discount badge, authentic manufacturer badge) */}
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${prod.badgeColor}`}>
+                  <div className="flex items-center justify-between gap-1 sm:gap-2 mb-2 sm:mb-3">
+                    <span className={`text-[8px] sm:text-[10px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg truncate ${prod.badgeColor}`}>
                       {prod.badge}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3 text-blue-600" />
+                    <span className="text-[8px] sm:text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg flex items-center gap-1 shrink-0">
+                      <ShieldCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600" />
                       {prod.warranty}
                     </span>
                   </div>
@@ -1219,14 +1219,14 @@ export default function HomePage() {
                   <Link
                     href={`/san-pham/${prod.slug}`}
                     scroll={true}
-                    className="block w-full h-48 rounded-2xl overflow-hidden bg-slate-50 mb-3.5 cursor-pointer relative"
+                    className="block w-full h-32 sm:h-48 rounded-xl sm:rounded-2xl overflow-hidden bg-slate-50 mb-2 sm:mb-3.5 cursor-pointer relative"
                   >
                     <img
                       src={prod.image}
                       alt={prod.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute bottom-2.5 right-2.5 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                    <div className="absolute bottom-2.5 right-2.5 bg-slate-900/80 backdrop-blur-xs text-white text-[10px] font-bold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex items-center gap-1">
                       <span>Xem chi tiết</span>
                       <ChevronRight className="w-3 h-3" />
                     </div>
@@ -1234,26 +1234,26 @@ export default function HomePage() {
 
                   {/* Title */}
                   <Link href={`/san-pham/${prod.slug}`} scroll={true}>
-                    <h3 className="text-sm font-black text-slate-900 line-clamp-2 hover:text-blue-600 transition leading-snug mb-1.5">
+                    <h3 className="text-xs sm:text-sm font-bold sm:font-black text-slate-900 line-clamp-2 hover:text-blue-600 transition leading-snug mb-1 sm:mb-1.5">
                       {prod.name}
                     </h3>
                   </Link>
 
-                  <p className="text-xs text-slate-400 line-clamp-1 mb-3">{prod.specs}</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-1 mb-2 sm:mb-3">{prod.specs}</p>
 
                   {/* Price display (Giá niêm yết không sale, không gạch giá) */}
-                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 mb-4">
-                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
-                      Giá niêm yết chính hãng (VAT)
+                  <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 mb-2.5 sm:mb-4">
+                    <span className="text-[9px] sm:text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
+                      Giá niêm yết (VAT)
                     </span>
-                    <span className="text-xl font-black text-slate-900">
+                    <span className="text-sm sm:text-xl font-black text-slate-900">
                       {formatVND(prod.price)}
                     </span>
                   </div>
                 </div>
 
                 {/* 2 Buttons: Thêm vào giỏ hàng + Mua ngay */}
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 pt-2 border-t border-slate-100">
                   <button
                     type="button"
                     onClick={(e) =>
@@ -1263,10 +1263,10 @@ export default function HomePage() {
                       })
                     }
                     disabled={addingId === prod.variantId}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 font-bold py-2 sm:py-2.5 px-2 rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer"
                     title="Thêm vào giỏ hàng"
                   >
-                    <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
+                    <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600" />
                     <span className="truncate">
                       {addedId === prod.variantId ? "Đã thêm ✓" : "+ Giỏ Hàng"}
                     </span>
@@ -1274,10 +1274,10 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => handleBuyNow(prod.variantId)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2.5 px-2 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-sm shadow-blue-500/25 active:scale-95 cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-2 sm:py-2.5 px-2 rounded-xl text-[11px] sm:text-xs flex items-center justify-center gap-1 transition shadow-sm shadow-blue-500/25 active:scale-95 cursor-pointer"
                     title="Mua ngay"
                   >
-                    <Zap className="w-3.5 h-3.5 fill-white" />
+                    <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-white" />
                     <span>Mua Ngay</span>
                   </button>
                 </div>
@@ -1336,11 +1336,11 @@ export default function HomePage() {
         </div>
 
         {/* 4 Interactive Category Tabs */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+        <div className="flex items-center sm:justify-center gap-2 overflow-x-auto pb-2 scrollbar-none flex-nowrap mb-6 sm:mb-8 text-xs font-bold">
           <button
             type="button"
             onClick={() => setActiveSolutionTab("ai")}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs ${
+            className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer ${
               activeSolutionTab === "ai"
                 ? "bg-blue-600 text-white shadow-blue-500/25 shadow-md"
                 : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
@@ -1352,7 +1352,7 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setActiveSolutionTab("vfx")}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs ${
+            className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer ${
               activeSolutionTab === "vfx"
                 ? "bg-blue-600 text-white shadow-blue-500/25 shadow-md"
                 : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
@@ -1364,7 +1364,7 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setActiveSolutionTab("gaming")}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs ${
+            className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer ${
               activeSolutionTab === "gaming"
                 ? "bg-blue-600 text-white shadow-blue-500/25 shadow-md"
                 : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
@@ -1376,7 +1376,7 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => setActiveSolutionTab("enterprise")}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs ${
+            className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs font-bold transition shadow-xs whitespace-nowrap shrink-0 cursor-pointer ${
               activeSolutionTab === "enterprise"
                 ? "bg-blue-600 text-white shadow-blue-500/25 shadow-md"
                 : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
@@ -1387,13 +1387,13 @@ export default function HomePage() {
         </div>
 
         {/* Featured Showcase Box for Active Tab */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden p-6 lg:p-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xl overflow-hidden p-4 sm:p-6 lg:p-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
             {/* Left Product Image */}
             <Link
               href={`/san-pham/${currentPackage.slug}`}
               scroll={true}
-              className="lg:col-span-5 relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 h-72 sm:h-80 flex items-center justify-center cursor-pointer group/ws"
+              className="lg:col-span-5 relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 h-56 sm:h-80 flex items-center justify-center cursor-pointer group/ws"
             >
               <img
                 src={currentPackage.image}

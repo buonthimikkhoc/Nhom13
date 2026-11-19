@@ -129,7 +129,7 @@ export default function ProductDetailPage() {
       </nav>
 
       {/* Main Product Info */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 bg-white p-6 md:p-8 rounded-3xl border border-slate-200/80 shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10 bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs">
         {/* Left: Images */}
         <div className="space-y-4">
           <div className="relative pt-[80%] rounded-2xl bg-slate-50 border overflow-hidden">
@@ -273,22 +273,22 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-2">
               <button
                 onClick={handleAddToCart}
                 disabled={selectedVariant.stock <= 0}
-                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-sm py-3.5 px-4 rounded-2xl transition flex items-center justify-center gap-2 border border-blue-200 disabled:opacity-50"
+                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-xs sm:text-sm py-3 sm:py-3.5 px-2 sm:px-4 rounded-xl sm:rounded-2xl transition flex items-center justify-center gap-1.5 sm:gap-2 border border-blue-200 disabled:opacity-50 cursor-pointer active:scale-95"
               >
-                <ShoppingCart className="w-4 h-4" />
-                Thêm vào giỏ hàng
+                <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>+ Giỏ hàng</span>
               </button>
               <button
                 onClick={handleBuyNow}
                 disabled={selectedVariant.stock <= 0}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm py-3.5 px-4 rounded-2xl transition shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs sm:text-sm py-3 sm:py-3.5 px-2 sm:px-4 rounded-xl sm:rounded-2xl transition shadow-md shadow-red-600/30 flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
               >
-                <Zap className="w-4 h-4 fill-white" />
-                Mua ngay (Giao 2h)
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-white" />
+                <span>Mua ngay</span>
               </button>
             </div>
           </div>

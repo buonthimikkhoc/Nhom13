@@ -52,13 +52,13 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden relative">
       {/* Badges */}
-      <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1 items-start">
+      <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
         {discountPercent && (
-          <span className="bg-red-600 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-sm">
+          <span className="bg-red-600 text-white text-[9px] sm:text-[11px] font-black px-1.5 sm:px-2 py-0.5 rounded-full shadow-xs">
             -{discountPercent}%
           </span>
         )}
-        <span className="bg-slate-900/80 backdrop-blur-sm text-slate-200 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+        <span className="bg-slate-900/80 backdrop-blur-xs text-slate-200 text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-full flex items-center gap-1">
           <Shield className="w-2.5 h-2.5 text-blue-400" />
           {product.warrantyMonths}T BH
         </span>
@@ -75,44 +75,44 @@ export default function ProductCard({ product }: ProductCardProps) {
             e.currentTarget.onerror = null;
             e.currentTarget.src = "https://bizweb.dktcdn.net/thumb/grande/100/329/122/products/laptop-asus-expertbook-p1-p1403cva-c5h16-63ws-01.jpg";
           }}
-          className="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+          className="absolute inset-0 w-full h-full object-contain p-2 sm:p-4 group-hover:scale-105 transition-transform duration-300"
         />
       </Link>
 
       {/* Content */}
-      <div className="p-4 flex-1 flex flex-col justify-between">
+      <div className="p-2.5 sm:p-4 flex-1 flex flex-col justify-between">
         <div>
           {/* Brand & Category */}
-          <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium mb-1.5">
-            <span className="uppercase tracking-wider font-bold text-blue-600">{product.brand?.name}</span>
-            <div className="flex items-center gap-1 text-amber-500">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              <span className="font-semibold text-slate-700">{product.avgRating.toFixed(1)}</span>
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 font-medium mb-1">
+            <span className="uppercase tracking-wider font-bold text-blue-600 truncate max-w-[90px]">{product.brand?.name}</span>
+            <div className="flex items-center gap-0.5 text-amber-500 shrink-0">
+              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 text-amber-400" />
+              <span className="font-semibold text-slate-700 text-[10px] sm:text-xs">{product.avgRating.toFixed(1)}</span>
             </div>
           </div>
 
           {/* Product Title */}
           <Link href={`/san-pham/${product.slug}`} scroll={true}>
-            <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition line-clamp-2 leading-snug mb-2">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 transition line-clamp-2 leading-snug mb-1.5">
               {product.name}
             </h3>
           </Link>
 
           {/* Tech Spec Badges (CPU, RAM, GPU) */}
           {(specsObj.cpu || specsObj.vga || specsObj.ram) && (
-            <div className="flex flex-wrap gap-1 mb-3">
+            <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
               {specsObj.cpu && (
-                <span className="text-[10px] bg-slate-100 text-slate-700 font-medium px-2 py-0.5 rounded">
+                <span className="text-[9px] sm:text-[10px] bg-slate-100 text-slate-700 font-medium px-1.5 sm:px-2 py-0.5 rounded truncate max-w-[120px]">
                   {specsObj.cpu.split("(")[0].trim()}
                 </span>
               )}
               {specsObj.ram && (
-                <span className="text-[10px] bg-blue-50 text-blue-700 font-medium px-2 py-0.5 rounded">
+                <span className="text-[9px] sm:text-[10px] bg-blue-50 text-blue-700 font-medium px-1.5 sm:px-2 py-0.5 rounded">
                   {specsObj.ram.split(" ")[0]}
                 </span>
               )}
               {specsObj.vga && (
-                <span className="text-[10px] bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded">
+                <span className="text-[9px] sm:text-[10px] bg-emerald-50 text-emerald-700 font-medium px-1.5 sm:px-2 py-0.5 rounded truncate max-w-[120px]">
                   {specsObj.vga.split("(")[0].trim()}
                 </span>
               )}
@@ -121,13 +121,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         {/* Price & Action */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 mt-auto">
           <div>
-            <div className="text-base font-extrabold text-red-600 leading-tight">
+            <div className="text-xs sm:text-base font-extrabold text-red-600 leading-tight">
               {formatVND(price)}
             </div>
             {compareAtPrice && compareAtPrice > price && (
-              <div className="text-[11px] text-slate-400 line-through">
+              <div className="text-[9px] sm:text-[11px] text-slate-400 line-through">
                 {formatVND(compareAtPrice)}
               </div>
             )}
@@ -136,9 +136,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleQuickAdd}
             title="Thêm nhanh vào giỏ hàng"
-            className="w-9 h-9 rounded-xl bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white flex items-center justify-center transition shadow-sm group/btn"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white flex items-center justify-center transition shadow-xs group/btn cursor-pointer shrink-0 active:scale-95"
           >
-            <ShoppingCart className="w-4 h-4" />
+            <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>

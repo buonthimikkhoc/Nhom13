@@ -328,7 +328,7 @@ export default function CheckoutPage() {
         {/* Left: Information Form */}
         <div className="lg:col-span-2 space-y-6">
           {/* Customer info */}
-          <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
             <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2 border-b pb-3">
               <Truck className="w-4 h-4 text-blue-600" />
               1. Địa Chỉ Nhận Hàng

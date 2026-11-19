@@ -223,29 +223,29 @@ export default function CartPage() {
                 "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=200";
 
               return (
-                <div key={item.id} className="p-4 sm:p-6 flex gap-4 sm:gap-6 items-center">
+                <div key={item.id} className="p-3 sm:p-6 flex gap-3 sm:gap-6 items-center">
                   <img
                     src={thumbnail}
                     alt={item.variant?.product?.name}
                     referrerPolicy="no-referrer"
-                    className="w-20 h-20 object-contain rounded-2xl bg-slate-50 border p-2 flex-shrink-0"
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain rounded-xl sm:rounded-2xl bg-slate-50 border p-1.5 sm:p-2 flex-shrink-0"
                   />
 
                   <div className="flex-1 min-w-0">
                     <Link
                       href={`/san-pham/${item.variant?.product?.slug}`}
-                      className="text-sm font-bold text-slate-900 hover:text-blue-600 transition truncate block"
+                      className="text-xs sm:text-sm font-bold text-slate-900 hover:text-blue-600 transition line-clamp-2 block leading-snug"
                     >
                       {item.variant?.product?.name}
                     </Link>
-                    <span className="text-xs text-slate-500 block mt-0.5">{item.variant?.name}</span>
+                    <span className="text-[11px] sm:text-xs text-slate-500 block mt-0.5 truncate">{item.variant?.name}</span>
                     <span className="text-xs font-black text-red-600 block sm:hidden mt-1">
                       {formatVND(item.variant?.price)}
                     </span>
 
                     {/* Quantity controls */}
-                    <div className="flex items-center gap-3 mt-3">
-                      <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50 text-xs">
+                    <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3">
+                      <div className="flex items-center border border-slate-200 rounded-lg sm:rounded-xl overflow-hidden bg-slate-50 text-xs">
                         <button
                           type="button"
                           onClick={() => {
@@ -260,7 +260,7 @@ export default function CartPage() {
                         >
                           -
                         </button>
-                        <span className="px-3 py-1 font-bold bg-white text-slate-800">{item.quantity}</span>
+                        <span className="px-2.5 sm:px-3 py-1 font-bold bg-white text-slate-800 text-xs">{item.quantity}</span>
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
@@ -277,7 +277,7 @@ export default function CartPage() {
                         className="text-slate-400 hover:text-red-600 transition p-1.5 rounded-lg hover:bg-red-50 cursor-pointer active:scale-95"
                         title="Xóa sản phẩm khỏi giỏ hàng"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   </div>

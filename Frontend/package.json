@@ -1,6 +1,6 @@
 {
   "name": "shopcongnghe-techcore",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shop Công Nghệ TechCore - E-commerce Core (Next.js 14, App Router, Tailwind CSS, Port 3030)",
   "private": true,
   "scripts": {

@@ -22,6 +22,7 @@ import {
   Headphones,
   Sliders,
   ChevronRight,
+  ChevronLeft,
   Send,
   Boxes,
   MapPin,
@@ -51,7 +52,8 @@ export default function HomePage() {
   const [vipEmail, setVipEmail] = useState("");
   const [vipSuccess, setVipSuccess] = useState(false);
   const [nonSaleFilter, setNonSaleFilter] = useState<"all" | "hardware" | "apple" | "gear">("all");
-  const [standardVisibleCount, setStandardVisibleCount] = useState<number>(6);
+  const [standardCurrentPage, setStandardCurrentPage] = useState<number>(1);
+  const STANDARD_PER_PAGE = 6;
 
   // Tab Giải Pháp Trọn Gói
   const [activeSolutionTab, setActiveSolutionTab] = useState<
@@ -557,6 +559,28 @@ export default function HomePage() {
   const filteredStandardProducts = useMemo(() => {
     return standardProducts.filter((p) => nonSaleFilter === "all" || p.category === nonSaleFilter);
   }, [standardProducts, nonSaleFilter]);
+
+  // Tổng số trang phân trang số 1, 2, 3, 4...
+  const standardTotalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredStandardProducts.length / STANDARD_PER_PAGE));
+  }, [filteredStandardProducts]);
+
+  // Sản phẩm hiển thị trên trang hiện tại
+  const displayedStandardProducts = useMemo(() => {
+    const start = (standardCurrentPage - 1) * STANDARD_PER_PAGE;
+    return filteredStandardProducts.slice(start, start + STANDARD_PER_PAGE);
+  }, [filteredStandardProducts, standardCurrentPage]);
+
+  const handleStandardPageChange = (page: number) => {
+    if (page < 1 || page > standardTotalPages) return;
+    setStandardCurrentPage(page);
+    if (typeof window !== "undefined") {
+      const el = document.getElementById("standard-products");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
 
   // Dynamic Flash Deals từ Catalog sản phẩm thực tế
   const flashDeals = useMemo(() => {
@@ -1160,7 +1184,7 @@ export default function HomePage() {
       {/* =========================================================================
           3B. SẢN PHẨM TIÊU CHUẨN & PHẦN CỨNG CHÍNH HÃNG (GIÁ NIÊM YẾT / KHÔNG SALE)
       ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="standard-products" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold tracking-wider uppercase mb-2">
@@ -1188,7 +1212,7 @@ export default function HomePage() {
                 type="button"
                 onClick={() => {
                   setNonSaleFilter(tab.key as any);
-                  setStandardVisibleCount(6);
+                  setStandardCurrentPage(1);
                 }}
                 className={`px-3.5 py-2 rounded-xl transition whitespace-nowrap cursor-pointer ${
                   nonSaleFilter === tab.key
@@ -1202,11 +1226,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 6 Non-Sale Product Cards Grid (Tự động tải thêm theo nhu cầu) */}
+        {/* 6 Non-Sale Product Cards Grid (Phân trang số 1 2 3 4) */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-          {filteredStandardProducts
-            .slice(0, standardVisibleCount)
-            .map((prod) => (
+          {displayedStandardProducts.map((prod) => (
               <div
                 key={prod.id}
                 className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 hover:border-blue-400 hover:shadow-xl transition-all p-3 sm:p-5 flex flex-col justify-between group"
@@ -1293,36 +1315,77 @@ export default function HomePage() {
             ))}
         </div>
 
-        {/* Nút Xem Thêm / Thu Gọn / Khám Phá Toàn Bộ */}
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-          {standardVisibleCount < filteredStandardProducts.length && (
-            <button
-              type="button"
-              onClick={() => setStandardVisibleCount((prev) => prev + 6)}
-              className="px-6 py-3 rounded-2xl bg-white hover:bg-blue-50 text-blue-600 font-bold text-xs border border-blue-200 shadow-xs hover:shadow-md transition flex items-center gap-2 active:scale-95 cursor-pointer"
-            >
-              <span>Xem Thêm (+6 Sản Phẩm)</span>
-              <ChevronDown className="w-4 h-4 text-blue-600" />
-            </button>
-          )}
+        {/* Thanh Phân Trang Số 1 2 3 4 Chuẩn */}
+        <div className="mt-10 pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-xs text-slate-500 font-medium">
+            Trang <strong className="text-slate-800 font-bold">{standardCurrentPage}</strong> / {standardTotalPages} (Hiển thị {displayedStandardProducts.length} trên tổng {filteredStandardProducts.length} sản phẩm)
+          </span>
 
-          {standardVisibleCount > 6 && (
+          <div className="flex items-center gap-1.5 flex-wrap justify-center">
+            {/* Nút Trang Trước */}
             <button
               type="button"
-              onClick={() => setStandardVisibleCount(6)}
-              className="px-5 py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200 transition flex items-center gap-2 active:scale-95 cursor-pointer"
+              disabled={standardCurrentPage === 1}
+              onClick={() => handleStandardPageChange(standardCurrentPage - 1)}
+              className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer shadow-2xs"
             >
-              <span>Thu Gọn</span>
-              <ChevronUp className="w-4 h-4 text-slate-500" />
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Trang trước</span>
             </button>
-          )}
+
+            {/* Các Nút Số Trang 1 2 3 4 ... */}
+            {Array.from({ length: standardTotalPages }, (_, i) => i + 1).map((page) => {
+              if (
+                standardTotalPages <= 7 ||
+                page === 1 ||
+                page === standardTotalPages ||
+                (page >= standardCurrentPage - 1 && page <= standardCurrentPage + 1)
+              ) {
+                return (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => handleStandardPageChange(page)}
+                    className={`w-9 h-9 rounded-xl text-xs font-black transition flex items-center justify-center cursor-pointer ${
+                      standardCurrentPage === page
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-105"
+                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 shadow-2xs"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              } else if (
+                (page === 2 && standardCurrentPage > 3) ||
+                (page === standardTotalPages - 1 && standardCurrentPage < standardTotalPages - 2)
+              ) {
+                return (
+                  <span key={page} className="px-1 text-slate-400 text-xs font-bold">
+                    ...
+                  </span>
+                );
+              }
+              return null;
+            })}
+
+            {/* Nút Trang Sau */}
+            <button
+              type="button"
+              disabled={standardCurrentPage === standardTotalPages}
+              onClick={() => handleStandardPageChange(standardCurrentPage + 1)}
+              className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer shadow-2xs"
+            >
+              <span className="hidden sm:inline">Trang sau</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
 
           <Link
             href="/danh-muc/tat-ca"
-            className="px-6 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md shadow-slate-900/10 transition flex items-center gap-2 active:scale-95"
+            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition flex items-center gap-2 active:scale-95 shrink-0"
           >
-            <span>Khám Phá Toàn Bộ Kho ({tabCounts.all} Sản Phẩm)</span>
-            <ArrowRight className="w-4 h-4 text-white" />
+            <span>Toàn Bộ Kho ({tabCounts.all})</span>
+            <ArrowRight className="w-3.5 h-3.5 text-white" />
           </Link>
         </div>
       </section>
